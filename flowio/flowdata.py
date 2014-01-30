@@ -308,6 +308,34 @@ class FlowData(object):
 
         return f
 
+    @property
+    def channels(self):
+        """
+        Returns a dictionary of channels, with key as channel number
+        and value is a dictionary of the PnN and PnS text
+        """
+        channels = dict()
+        regex_pnn = re.compile("^p(\d+)n$", re.IGNORECASE)
+
+        for i in self.text.keys():
+            match = regex_pnn.match(i)
+            if not match:
+                continue
+
+            channel_num = match.groups()[0]
+            channels[channel_num] = dict()
+
+            channels[channel_num]['PnN'] = self.text[match.group()]
+
+            # now check for PnS field, which is optional so may not exist
+            regex_pns = re.compile("^p%ss$" % channel_num, re.IGNORECASE)
+            for i in self.text.keys():
+                match = regex_pns.match(i)
+                if match:
+                    channels[channel_num]['PnS'] = [self.text[match.group()]]
+
+        return channels
+
     def write_fcs(self, filename, extra=None):
         def text_size(text_dict, text_delimiter):
             result = text_delimiter
