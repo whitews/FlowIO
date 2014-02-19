@@ -332,7 +332,7 @@ class FlowData(object):
             for i in self.text.keys():
                 match = regex_pns.match(i)
                 if match:
-                    channels[channel_num]['PnS'] = [self.text[match.group()]]
+                    channels[channel_num]['PnS'] = self.text[match.group()]
 
         return channels
 
