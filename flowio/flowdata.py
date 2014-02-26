@@ -157,7 +157,12 @@ class FlowData(object):
         data_range = []
         for i in range(1, int(text['par']) + 1):
             bit_width.append(int(text['p%db' % i]))
-            data_range.append(int(text['p%dr' % i]))
+            try:
+                data_range.append(int(text['p%dr' % i]))
+            except ValueError:
+                #  we found an FCS file where one channel was using
+                # exp notation for the int
+                data_range.append(int(float(text['p%dr' % i])))
 
         if data_type.lower() == 'i':
             data = self.__parse_int_data(
