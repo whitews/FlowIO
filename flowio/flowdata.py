@@ -41,6 +41,7 @@ class FlowData(object):
             self.header['text_stop'])
 
         self.channel_count = int(self.text['par'])
+        self.event_count = int(self.text['tot'])
 
         # parse analysis
         try:
