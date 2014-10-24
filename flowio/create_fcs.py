@@ -1,47 +1,52 @@
-def create_fcs(events, channel_names, filename, extra=None):
+from array import array
 
-    def text_size(text_dict, text_delimiter):
+
+def create_fcs(event_data, channel_names, filename):
+
+    def build_text(text_dict, text_delimiter):
         result = text_delimiter
-        for idx in text_dict:
+        for key in sorted(text_dict.keys()):
             result += '$%s%s%s%s' % (
-                idx,
+                key,
                 text_delimiter,
-                text_dict[idx],
-                text_delimiter)
-        return len(result), result
+                text_dict[key],
+                text_delimiter
+            )
+        return result
 
-    # magic FCS defined positions
-    header_text_start = (10, 17)
-    header_text_end = (18, 25)
-    header_data_start = (26, 33)
-    header_data_end = (34, 41)
-    header_analysis_start = (42, 49)
-    header_analysis_end = (50, 5)
+    # FCS defined header byte locations
+    header_text_start = 10
+    header_text_end = 18
+    header_data_start = 26
+    header_data_end = 34
+    header_data_max_size = 8
+    header_analysis_start = 42
+    header_analysis_end = 50
 
-    fh = open(filename, 'wb')
-    fh.write('FCS3.1')
-    fh.write(' ' * 53)
-
-    ## Write TEXT Segment
     text_start = 256  # arbitrarily start at byte 256.
     delimiter = '/'  # use / as our delimiter.
 
-    # Write spaces until the start of the txt segment
-    fh.seek(58)
-    fh.write(' ' * (text_start - fh.tell()))
-
+    # Collect some info from the user specified inputs
+    # and do some sanity checking
     n_channels = len(channel_names)
-    n_points = len(events)
-    data_size = 4 * n_points  # 4 bytes to hold float
+    n_points = len(event_data)
+    if not n_points % n_channels == 0:
+        raise ValueError(
+            "Number of data points is not a multiple of the number of channels"
+        )
+    data_size = 4 * n_points  # 4 bytes per float (we only store floats)
 
+    #
+    # Construct the primary text section
+    #
     text = dict()
     text['BEGINANALYSIS'] = '0'
-    text['BEGINDATA'] = '0'
+    text['BEGINDATA'] = ''  # IMPORTANT: this gets replaced later
     text['BEGINSTEXT'] = '0'
     text['BYTEORD'] = '1,2,3,4'  # little endian
     text['DATATYPE'] = 'F'  # only do float data
     text['ENDANALYSIS'] = '0'
-    text['ENDDATA'] = '0'
+    text['ENDDATA'] = ''  # IMPORTANT: this gets replaced as well
     text['ENDSTEXT'] = '0'
     text['MODE'] = 'L'  # only do list mode data
     text['NEXTDATA'] = '0'
@@ -50,49 +55,63 @@ def create_fcs(events, channel_names, filename, extra=None):
     for i in range(n_channels):
         text['P%dB' % (i + 1)] = '32'  # float requires 32 bits
         text['P%dE' % (i + 1)] = '0,0'
-        text['P%dR' % (i + 1)] = str(max(events))
+        text['P%dR' % (i + 1)] = str(max(event_data))
         text['P%dN' % (i + 1)] = channel_names[i]
         text['P%dS' % (i + 1)] = channel_names[i]
 
-    if extra is not None:
-        for i in extra:
-            tmp = i.strip()
-            if tmp.lower() not in text and tmp.upper() not in text:
-                val = extra[i].replace(delimiter, delimiter + delimiter)
-                text[i] = val
+    # Calculate initial text size, but it's tricky b/c the text contains the
+    # byte offset location for the data, which depends on the size of the
+    # text section. We set placeholder empty string values for BEGINDATA &
+    # ENDDATA. Our data begins at the:
+    #  initial location + (string length of the initial location plus 2)
+    text_string = build_text(text, delimiter)
+    initial_offset = text_start + len(text_string)
+    final_start_data_offset = initial_offset + len(str(initial_offset + 2))
+    # and tack on the ENDDATA string length
+    final_start_data_offset += len(str(final_start_data_offset + data_size))
+    text['BEGINDATA'] = str(final_start_data_offset)
+    text['ENDDATA'] = str(final_start_data_offset + data_size - 1)
 
-    i = 1
-    size, _ = text_size(text, delimiter)
-    prop_size = text_start + ((size % 256) + i) * 256
-    text['BEGINDATA'] = prop_size
-    text['ENDDATA'] = prop_size + data_size
-    data_start = prop_size
-    data_end = prop_size + data_size - 1
-    size, text_segment = text_size(text, delimiter)
-    text_end = text_start + size - 1
+    # re-build text section and sanity check the data start location
+    text_string = build_text(text, delimiter)
+    if text_start + len(text_string) != int(text['BEGINDATA']):
+        raise Exception("something went wrong calculating the offsets")
 
-    fh.write(text_segment)
-    fh.write(' ' * (data_start - fh.tell()))
-    fh.write(str(float(i) for i in events))
+    #
+    # Start writing to file, beginning with header
+    #
+    fh = open(filename, 'wb')
+    fh.write('FCS3.1')
+    fh.write(' ' * 4)  # spaces for bytes 6 -> 9
+    fh.write('{0: >8}'.format(str(text_start)))
 
-    fh.seek(header_text_start[0])
-    fh.write(str(text_start))
-    fh.seek(header_text_end[0])
-    fh.write(str(text_end))
+    # Text end byte is one less than where our data starts
+    fh.write('{0: >8}'.format(str(final_start_data_offset - 1)))
 
-    fh.seek(header_data_start[0])
-    if len(str(data_end)) <= (header_data_end[1] - header_data_end[0] + 1):
-        fh.write(str(data_start))
-        fh.seek(header_data_end[0])
-        fh.write(str(data_end))
-    else:
-        fh.write(str(0))
-        fh.seek(header_data_end[0])
-        fh.write(str(0))
+    # TODO: set zeroes if data offsets are greater than header max data size
 
-    fh.seek(header_analysis_start[0])
-    fh.write(str(0))
-    fh.seek(header_analysis_end[0])
-    fh.write(str(0))
+    # data start byte location
+    fh.write('{0: >8}'.format(text['BEGINDATA']))
+
+    # data end byte location
+    fh.write('{0: >8}'.format(text['ENDDATA']))
+
+    # We don't support analysis sections so write space padded 8 byte '0'
+    fh.write('{0: >8}'.format('0'))
+
+    # Ditto for the analysis end
+    fh.write('{0: >8}'.format('0'))
+
+    # Write spaces until the start of the text segment
+    fh.write(' ' * (text_start - fh.tell()))
+
+    # Write out the entire text section
+    fh.write(text_string)
+
+    # And now our data!
+    float_array = array('f', event_data)
+    float_array.tofile(fh)
 
     fh.close()
+
+    return True
