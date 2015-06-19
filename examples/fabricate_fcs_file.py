@@ -110,5 +110,10 @@ if __name__ == '__main__':
         'channel_D'
     ]
 
-    create_fcs(data_set1, channel_names, 'data_set1.fcs')
-    create_fcs(data_set2, channel_names, 'data_set2.fcs')
+    fh = open('data_set1.fcs', 'wb')
+    create_fcs(data_set1, channel_names, fh)
+    fh.close()
+
+    fh = open('data_set2.fcs', 'wb')
+    create_fcs(data_set2, channel_names, fh)
+    fh.close()
