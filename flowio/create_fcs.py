@@ -1,7 +1,7 @@
 from array import array
 
 
-def create_fcs(event_data, channel_names, filename):
+def create_fcs(event_data, channel_names, file_handle):
 
     def build_text(text_dict, text_delimiter):
         result = text_delimiter
@@ -80,38 +80,36 @@ def create_fcs(event_data, channel_names, filename):
     #
     # Start writing to file, beginning with header
     #
-    fh = open(filename, 'wb')
-    fh.write('FCS3.1')
-    fh.write(' ' * 4)  # spaces for bytes 6 -> 9
-    fh.write('{0: >8}'.format(str(text_start)))
+    file_handle.seek(0)
+    file_handle.write('FCS3.1')
+    file_handle.write(' ' * 4)  # spaces for bytes 6 -> 9
+    file_handle.write('{0: >8}'.format(str(text_start)))
 
     # Text end byte is one less than where our data starts
-    fh.write('{0: >8}'.format(str(final_start_data_offset - 1)))
+    file_handle.write('{0: >8}'.format(str(final_start_data_offset - 1)))
 
     # TODO: set zeroes if data offsets are greater than header max data size
 
     # data start byte location
-    fh.write('{0: >8}'.format(text['BEGINDATA']))
+    file_handle.write('{0: >8}'.format(text['BEGINDATA']))
 
     # data end byte location
-    fh.write('{0: >8}'.format(text['ENDDATA']))
+    file_handle.write('{0: >8}'.format(text['ENDDATA']))
 
     # We don't support analysis sections so write space padded 8 byte '0'
-    fh.write('{0: >8}'.format('0'))
+    file_handle.write('{0: >8}'.format('0'))
 
     # Ditto for the analysis end
-    fh.write('{0: >8}'.format('0'))
+    file_handle.write('{0: >8}'.format('0'))
 
     # Write spaces until the start of the text segment
-    fh.write(' ' * (text_start - fh.tell()))
+    file_handle.write(' ' * (text_start - file_handle.tell()))
 
     # Write out the entire text section
-    fh.write(text_string)
+    file_handle.write(text_string)
 
     # And now our data!
     float_array = array('f', event_data)
-    float_array.tofile(fh)
+    float_array.tofile(file_handle)
 
-    fh.close()
-
-    return True
+    return file_handle
