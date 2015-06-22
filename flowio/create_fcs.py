@@ -1,11 +1,12 @@
 from array import array
+from collections import OrderedDict
 
 
 def create_fcs(event_data, channel_names, file_handle):
 
     def build_text(text_dict, text_delimiter):
         result = text_delimiter
-        for key in sorted(text_dict.keys()):
+        for key in text_dict.keys():
             result += '$%s%s%s%s' % (
                 key,
                 text_delimiter,
@@ -36,10 +37,8 @@ def create_fcs(event_data, channel_names, file_handle):
         )
     data_size = 4 * n_points  # 4 bytes per float (we only store floats)
 
-    #
-    # Construct the primary text section
-    #
-    text = dict()
+    # Construct the primary text section using OrderedDict to preserve order
+    text = OrderedDict()
     text['BEGINANALYSIS'] = '0'
     text['BEGINDATA'] = ''  # IMPORTANT: this gets replaced later
     text['BEGINSTEXT'] = '0'
