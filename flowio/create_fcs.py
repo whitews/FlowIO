@@ -56,7 +56,6 @@ def create_fcs(event_data, channel_names, file_handle):
         text['P%dE' % (i + 1)] = '0,0'
         text['P%dR' % (i + 1)] = str(max(event_data))
         text['P%dN' % (i + 1)] = channel_names[i]
-        text['P%dS' % (i + 1)] = channel_names[i]
 
     # Calculate initial text size, but it's tricky b/c the text contains the
     # byte offset location for the data, which depends on the size of the
