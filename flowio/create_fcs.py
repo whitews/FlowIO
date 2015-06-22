@@ -15,15 +15,6 @@ def create_fcs(event_data, channel_names, file_handle):
             )
         return result
 
-    # FCS defined header byte locations
-    header_text_start = 10
-    header_text_end = 18
-    header_data_start = 26
-    header_data_end = 34
-    header_data_max_size = 8
-    header_analysis_start = 42
-    header_analysis_end = 50
-
     text_start = 256  # arbitrarily start at byte 256.
     delimiter = '/'  # use / as our delimiter.
 
