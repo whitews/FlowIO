@@ -54,10 +54,21 @@ def create_fcs(event_data, channel_names, file_handle, spill=None):
     text['NEXTDATA'] = '0'
     text['PAR'] = str(n_channels)
     text['TOT'] = str(n_points / n_channels)
+
+    # calculate the max value, which we'll use for the $PnR field for all
+    # channels. We'll use a magic number of 262144 if the true max value is
+    # below that value, or the actual max value if above. 262144 (2^18) is
+    # used by many cytometers and by FlowJo to determine the default display
+    # range for plotting.
+    if max(event_data) < 262144:
+        pnr_value = '262144'
+    else:
+        pnr_value = str(max(event_data))
+
     for i in range(n_channels):
         text['P%dB' % (i + 1)] = '32'  # float requires 32 bits
         text['P%dE' % (i + 1)] = '0,0'
-        text['P%dR' % (i + 1)] = str(max(event_data))
+        text['P%dR' % (i + 1)] = pnr_value
         text['P%dN' % (i + 1)] = channel_names[i]
 
     if spill is not None:
