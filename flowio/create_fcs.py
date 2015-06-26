@@ -58,6 +58,12 @@ def create_fcs(event_data, channel_names, file_handle, spill=None, cyt=None):
     text['PAR'] = str(n_channels)
     text['TOT'] = str(n_points / n_channels)
 
+    if spill is not None:
+        text['SPILLOVER'] = spill
+
+    if cyt is not None:
+        text['CYT'] = cyt
+
     # calculate the max value, which we'll use for the $PnR field for all
     # channels. We'll use a magic number of 262144 if the true max value is
     # below that value, or the actual max value if above. 262144 (2^18) is
@@ -73,12 +79,6 @@ def create_fcs(event_data, channel_names, file_handle, spill=None, cyt=None):
         text['P%dE' % (i + 1)] = '0,0'
         text['P%dR' % (i + 1)] = pnr_value
         text['P%dN' % (i + 1)] = channel_names[i]
-
-    if spill is not None:
-        text['SPILLOVER'] = spill
-
-    if cyt is not None:
-        text['CYT'] = cyt
 
     # Calculate initial text size, but it's tricky b/c the text contains the
     # byte offset location for the data, which depends on the size of the
