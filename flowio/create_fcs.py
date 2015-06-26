@@ -2,7 +2,7 @@ from array import array
 from collections import OrderedDict
 
 
-def create_fcs(event_data, channel_names, file_handle, spill=None):
+def create_fcs(event_data, channel_names, file_handle, spill=None, cyt=None):
     """
     spill is optional text value that should conform to version 3.1 of the
     FCS Standard 3.1. A proper spillover matrix shall have the first value
@@ -10,10 +10,13 @@ def create_fcs(event_data, channel_names, file_handle, spill=None):
     by the $PnN names which should match the given channel_names argument. All
     values in the spill text string should be comma delimited with no newline
     characters.
+
+    cyt is an optional text string to use for the $CYT field
     :param event_data:
     :param channel_names:
     :param file_handle:
     :param spill:
+    :param cyt:
     :return:
     """
     def build_text(text_dict, text_delimiter):
@@ -73,6 +76,9 @@ def create_fcs(event_data, channel_names, file_handle, spill=None):
 
     if spill is not None:
         text['SPILLOVER'] = spill
+
+    if cyt is not None:
+        text['CYT'] = cyt
 
     # Calculate initial text size, but it's tricky b/c the text contains the
     # byte offset location for the data, which depends on the size of the
