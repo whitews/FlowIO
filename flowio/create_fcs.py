@@ -2,7 +2,15 @@ from array import array
 from collections import OrderedDict
 
 
-def create_fcs(event_data, channel_names, file_handle, spill=None, cyt=None):
+def create_fcs(
+        event_data,
+        channel_names,
+        file_handle,
+        spill=None,
+        cyt=None,
+        date=None,
+        extra=None,
+        opt_channel_names=None):
     """
     spill is optional text value that should conform to version 3.1 of the
     FCS Standard 3.1. A proper spillover matrix shall have the first value
@@ -12,14 +20,18 @@ def create_fcs(event_data, channel_names, file_handle, spill=None, cyt=None):
     characters.
 
     cyt is an optional text string to use for the $CYT field
+
+    extra is an option dictionary for adding extra non-standard keywords/values
+
     :param event_data:
     :param channel_names:
     :param file_handle:
     :param spill:
     :param cyt:
+    :param extra:
     :return:
     """
-    def build_text(text_dict, text_delimiter):
+    def build_text(text_dict, text_delimiter, extra_dict=None):
         result = text_delimiter
         for key in text_dict.keys():
             result += '$%s%s%s%s' % (
@@ -28,6 +40,15 @@ def create_fcs(event_data, channel_names, file_handle, spill=None, cyt=None):
                 text_dict[key],
                 text_delimiter
             )
+
+        if extra_dict is not None:
+            for key in extra_dict.keys():
+                result += '$%s%s%s%s' % (
+                    key,
+                    text_delimiter,
+                    extra_dict[key],
+                    text_delimiter
+                )
         return result
 
     text_start = 256  # arbitrarily start at byte 256.
@@ -36,6 +57,12 @@ def create_fcs(event_data, channel_names, file_handle, spill=None, cyt=None):
     # Collect some info from the user specified inputs
     # and do some sanity checking
     n_channels = len(channel_names)
+    if opt_channel_names is not None:
+        n_opt_channels = len(opt_channel_names)
+        if n_opt_channels != n_channels:
+            raise ValueError(
+                "Number of PnN labels does not match the number of PnS channels"
+            )
     n_points = len(event_data)
     if not n_points % n_channels == 0:
         raise ValueError(
@@ -64,6 +91,9 @@ def create_fcs(event_data, channel_names, file_handle, spill=None, cyt=None):
     if cyt is not None:
         text['CYT'] = cyt
 
+    if date is not None:
+        text['DATE'] = date
+
     # calculate the max value, which we'll use for the $PnR field for all
     # channels. We'll use a magic number of 262144 if the true max value is
     # below that value, or the actual max value if above. 262144 (2^18) is
@@ -80,12 +110,16 @@ def create_fcs(event_data, channel_names, file_handle, spill=None, cyt=None):
         text['P%dR' % (i + 1)] = pnr_value
         text['P%dN' % (i + 1)] = channel_names[i]
 
+        if opt_channel_names is not None:
+            if opt_channel_names[i] is not None:
+                text['P%dS' % (i + 1)] = opt_channel_names[i]
+
     # Calculate initial text size, but it's tricky b/c the text contains the
     # byte offset location for the data, which depends on the size of the
     # text section. We set placeholder empty string values for BEGINDATA &
     # ENDDATA. Our data begins at the:
     #  initial location + (string length of the initial location plus 2)
-    text_string = build_text(text, delimiter)
+    text_string = build_text(text, delimiter, extra_dict=extra)
     initial_offset = text_start + len(text_string)
     final_start_data_offset = initial_offset + len(str(initial_offset + 2))
     # and tack on the ENDDATA string length
@@ -94,7 +128,7 @@ def create_fcs(event_data, channel_names, file_handle, spill=None, cyt=None):
     text['ENDDATA'] = str(final_start_data_offset + data_size - 1)
 
     # re-build text section and sanity check the data start location
-    text_string = build_text(text, delimiter)
+    text_string = build_text(text, delimiter, extra_dict=extra)
     if text_start + len(text_string) != int(text['BEGINDATA']):
         raise Exception("something went wrong calculating the offsets")
 
