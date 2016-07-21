@@ -10,6 +10,7 @@ def create_fcs(
         cyt=None,
         date=None,
         extra=None,
+        extra_non_standard=None,
         opt_channel_names=None):
     """
     spill is optional text value that should conform to version 3.1 of the
@@ -31,7 +32,12 @@ def create_fcs(
     :param extra:
     :return:
     """
-    def build_text(text_dict, text_delimiter, extra_dict=None):
+    def build_text(
+            text_dict,
+            text_delimiter,
+            extra_dict=None,
+            extra_dict_non_standard=None
+    ):
         result = text_delimiter
         for key in text_dict.keys():
             result += '$%s%s%s%s' % (
@@ -49,6 +55,16 @@ def create_fcs(
                     extra_dict[key],
                     text_delimiter
                 )
+
+        if extra_dict_non_standard is not None:
+            for key in extra_dict_non_standard.keys():
+                result += '%s%s%s%s' % (
+                    key,
+                    text_delimiter,
+                    extra_dict_non_standard[key],
+                    text_delimiter
+                )
+
         return result
 
     text_start = 256  # arbitrarily start at byte 256.
