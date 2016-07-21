@@ -144,7 +144,12 @@ def create_fcs(
     text['ENDDATA'] = str(final_start_data_offset + data_size - 1)
 
     # re-build text section and sanity check the data start location
-    text_string = build_text(text, delimiter, extra_dict=extra)
+    text_string = build_text(
+        text,
+        delimiter,
+        extra_dict=extra,
+        extra_dict_non_standard=extra_non_standard
+    )
     if text_start + len(text_string) != int(text['BEGINDATA']):
         raise Exception("something went wrong calculating the offsets")
 
