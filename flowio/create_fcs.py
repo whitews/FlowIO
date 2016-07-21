@@ -29,7 +29,11 @@ def create_fcs(
     :param file_handle:
     :param spill:
     :param cyt:
+    :param date:
     :param extra:
+    :param extra_non_standard:
+    :param opt_channel_names:
+
     :return:
     """
     def build_text(
@@ -135,7 +139,12 @@ def create_fcs(
     # text section. We set placeholder empty string values for BEGINDATA &
     # ENDDATA. Our data begins at the:
     #  initial location + (string length of the initial location plus 2)
-    text_string = build_text(text, delimiter, extra_dict=extra)
+    text_string = build_text(
+        text,
+        delimiter,
+        extra_dict=extra,
+        extra_dict_non_standard=extra_non_standard
+    )
     initial_offset = text_start + len(text_string)
     final_start_data_offset = initial_offset + len(str(initial_offset + 2))
     # and tack on the ENDDATA string length
