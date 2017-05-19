@@ -12,17 +12,17 @@ for channel in fd.channels:
     if fd.channels[channel]['PnN'] in markers:
         fluoro_indices.append(int(channel) - 1)
 
+fluoro_indices.sort()
+
 comp_events = flowutils.compensate.compensate(
     events,
     spill,
     fluoro_indices
 )
 
-print 'Events shape: ' + str(events.shape)
-print 'Comp Events shape: ' + str(comp_events.shape)
+print('Events shape: ' + str(events.shape))
+print('Comp Events shape: ' + str(comp_events.shape))
 
-print events[:2]
+print(events[:1])
 
-print comp_events[:2]
-
-
+print(comp_events[:1])
