@@ -45,12 +45,14 @@ if __name__ == '__main__':
     #     (10000,)
     # )
 
+    np.random.seed(42)
+
     # these clusters are clearly separated
     cluster1 = np.random.multivariate_normal(
         [6000.0, 6000.0, 0.0, 3000.0],
         [
             [600000,  600000,   0,   0],
-            [300000,   1,   0,   0],
+            [300,   1000,   0,   0],
             [0,     0, 1,   10],
             [0,     0,   10,    1000]
         ],
