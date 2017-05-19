@@ -1,6 +1,8 @@
 *.pyc
+*.ipynb
 .idea
 .DS_Store
 build/
 dist/
 *.egg
+*.fcs
