@@ -6,6 +6,13 @@ from warnings import warn
 import os
 import re
 
+try:
+    # noinspection PyUnresolvedReferences, PyUnboundLocalVariable
+    basestring
+except NameError:
+    # noinspection PyShadowingBuiltins
+    basestring = str
+
 
 class FlowData(object):
     """
@@ -64,7 +71,7 @@ class FlowData(object):
         except KeyError:
             d_stop = self.header['data_end']
 
-        #account for LMD reporting wrong values for the size of the data segment
+        # account for LMD reporting wrong values for size of the data segment
         lmd = self.__fix_lmd(
             self.cur_offset,
             self.header['text_start'],
@@ -125,7 +132,7 @@ class FlowData(object):
     def __parse_text(self, offset, start, stop):
         """return parsed text segment of FCS file"""
         text = self.__read_bytes(offset, start, stop)
-        return self.__parse_pairs(text)
+        return self.__parse_pairs(text.decode())
 
     def __parse_analysis(self, offset, start, stop):
         """return parsed analysis segment of FCS file"""
@@ -290,7 +297,7 @@ class FlowData(object):
         elif b == 32:
             return 'I'
         else:
-            print "Cannot handle integers of bit size %d" % b
+            print("Cannot handle integers of bit size %d" % b)
             return None
 
     @staticmethod
@@ -303,7 +310,7 @@ class FlowData(object):
         elif b == 32:
             return 0xFFFFFFFF >> (b - ub)
         else:
-            print "Cannot handle integers of bit size %d" % b
+            print("Cannot handle integers of bit size %d" % b)
             return None
 
     @staticmethod
@@ -335,8 +342,8 @@ class FlowData(object):
 
             # now check for PnS field, which is optional so may not exist
             regex_pns = re.compile("^p%ss$" % channel_num, re.IGNORECASE)
-            for i in self.text.keys():
-                match = regex_pns.match(i)
+            for j in self.text.keys():
+                match = regex_pns.match(j)
                 if match:
                     channels[channel_num]['PnS'] = self.text[match.group()]
 
@@ -365,7 +372,7 @@ class FlowData(object):
         fh.write('FCS3.1')
         fh.write(' ' * 53)
 
-        ## Write TEXT Segment
+        # Write TEXT Segment
         text_start = 256  # arbitrarily start at byte 256.
         delimiter = '/'  # use / as our delimiter.
 
@@ -444,5 +451,3 @@ class FlowData(object):
 
     def __repr__(self):
         return self.name
-
-

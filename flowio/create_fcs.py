@@ -103,7 +103,7 @@ def create_fcs(
     text['MODE'] = 'L'  # only do list mode data
     text['NEXTDATA'] = '0'
     text['PAR'] = str(n_channels)
-    text['TOT'] = str(n_points / n_channels)
+    text['TOT'] = str(int(n_points / n_channels))
 
     if spill is not None:
         text['SPILLOVER'] = spill
@@ -166,32 +166,34 @@ def create_fcs(
     # Start writing to file, beginning with header
     #
     file_handle.seek(0)
-    file_handle.write('FCS3.1')
-    file_handle.write(' ' * 4)  # spaces for bytes 6 -> 9
-    file_handle.write('{0: >8}'.format(str(text_start)))
+    file_handle.write('FCS3.1'.encode())
+    spaces = ' ' * 4
+    file_handle.write(spaces.encode())  # spaces for bytes 6 -> 9
+    file_handle.write('{0: >8}'.format(str(text_start)).encode())
 
     # Text end byte is one less than where our data starts
-    file_handle.write('{0: >8}'.format(str(final_start_data_offset - 1)))
+    file_handle.write('{0: >8}'.format(str(final_start_data_offset - 1)).encode())
 
     # TODO: set zeroes if data offsets are greater than header max data size
 
     # data start byte location
-    file_handle.write('{0: >8}'.format(text['BEGINDATA']))
+    file_handle.write('{0: >8}'.format(text['BEGINDATA']).encode())
 
     # data end byte location
-    file_handle.write('{0: >8}'.format(text['ENDDATA']))
+    file_handle.write('{0: >8}'.format(text['ENDDATA']).encode())
 
     # We don't support analysis sections so write space padded 8 byte '0'
-    file_handle.write('{0: >8}'.format('0'))
+    file_handle.write('{0: >8}'.format('0').encode())
 
     # Ditto for the analysis end
-    file_handle.write('{0: >8}'.format('0'))
+    file_handle.write('{0: >8}'.format('0').encode())
 
     # Write spaces until the start of the text segment
-    file_handle.write(' ' * (text_start - file_handle.tell()))
+    spaces = ' ' * (text_start - file_handle.tell())
+    file_handle.write(spaces.encode())
 
     # Write out the entire text section
-    file_handle.write(text_string)
+    file_handle.write(text_string.encode())
 
     # And now our data!
     float_array = array('f', event_data)
