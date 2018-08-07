@@ -29,7 +29,7 @@ class FlowData(object):
                 raise
             except:
                 raise Exception('Unknown exception occurred reading file')
-        elif isinstance(filename, (file, IOBase)):
+        elif isinstance(filename, IOBase):
             self._fh = filename
         else:
             raise TypeError(
