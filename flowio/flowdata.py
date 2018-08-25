@@ -132,7 +132,13 @@ class FlowData(object):
     def __parse_text(self, offset, start, stop):
         """return parsed text segment of FCS file"""
         text = self.__read_bytes(offset, start, stop)
-        return self.__parse_pairs(text.decode())
+        try:
+            # try UTF-8 first
+            text = text.decode()
+        except UnicodeDecodeError:
+            # next best guess is Latin-1, if not that either, we throw the exception
+            text = text.decode("ISO-8859-1")
+        return self.__parse_pairs(text)
 
     def __parse_analysis(self, offset, start, stop):
         """return parsed analysis segment of FCS file"""
