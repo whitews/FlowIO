@@ -43,11 +43,17 @@ def create_fcs(
             extra_dict_non_standard=None
     ):
         result = text_delimiter
+
+        # iterate through all the key/value pairs, checking for the presence
+        # of the delimiter in any value. If present, double the delimiter per
+        # the FCS specification, as values are not allowed to be zero-length,
+        # this is how the delimiter can be included in a keyword value.
+
         for key in text_dict.keys():
             result += '$%s%s%s%s' % (
                 key,
                 text_delimiter,
-                text_dict[key],
+                text_dict[key].replace(text_delimiter, text_delimiter * 2),
                 text_delimiter
             )
 
@@ -56,7 +62,7 @@ def create_fcs(
                 result += '$%s%s%s%s' % (
                     key,
                     text_delimiter,
-                    extra_dict[key],
+                    extra_dict[key].replace(text_delimiter, text_delimiter * 2),
                     text_delimiter
                 )
 
@@ -65,7 +71,9 @@ def create_fcs(
                 result += '%s%s%s%s' % (
                     key,
                     text_delimiter,
-                    extra_dict_non_standard[key],
+                    extra_dict_non_standard[key].replace(
+                        text_delimiter, text_delimiter * 2
+                    ),
                     text_delimiter
                 )
 
@@ -131,7 +139,8 @@ def create_fcs(
         text['P%dN' % (i + 1)] = channel_names[i]
 
         if opt_channel_names is not None:
-            if opt_channel_names[i] is not None:
+            # cannot have zero-length values in FCS keyword values
+            if opt_channel_names[i] not in [None, '']:
                 text['P%dS' % (i + 1)] = opt_channel_names[i]
 
     # Calculate initial text size, but it's tricky b/c the text contains the
