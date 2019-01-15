@@ -5,6 +5,7 @@ from struct import calcsize, unpack
 from warnings import warn
 import os
 import re
+from functools import reduce
 
 try:
     # noinspection PyUnresolvedReferences, PyUnboundLocalVariable
@@ -27,8 +28,6 @@ class FlowData(object):
                 self._fh = open(str(filename), 'rb')
             except IOError:
                 raise
-            except:
-                raise Exception('Unknown exception occurred reading file')
         elif isinstance(filename, IOBase):
             self._fh = filename
         else:
