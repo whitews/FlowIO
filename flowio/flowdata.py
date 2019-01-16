@@ -84,7 +84,7 @@ class FlowData(object):
 
         try:
             unused_path, self.name = os.path.split(self._fh.name)
-        except AttributeError:
+        except (AttributeError, TypeError):
             self.name = 'InMemoryFile'
 
         self._fh.close()
