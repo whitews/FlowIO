@@ -135,16 +135,6 @@ class FlowData(object):
 
         return header
 
-    def __fix_lmd(self, offset, start, stop):
-        """
-        Handle LMD counting differently then most other FCS data
-        """
-        text = self.__read_bytes(offset, start, stop)
-        if text[0] == text[-1]:
-            return 0
-        else:
-            return -1
-
     def __parse_text(self, offset, start, stop):
         """return parsed text segment of FCS file"""
         text = self.__read_bytes(offset, start, stop)
@@ -209,21 +199,17 @@ class FlowData(object):
                 stop,
                 bit_width,
                 data_range,
-                order)
-        elif data_type.lower() == 'f' or data_type.lower() == 'd':
-            data = self.__parse_float_data(
+                order
+            )
+        else:
+            data = self.__parse_non_int_data(
                 offset,
                 start,
                 stop,
                 data_type.lower(),
-                order)
-        else:  # ascii
-            data = self.__parse_ascii_data(
-                offset,
-                start,
-                stop,
-                data_type,
-                order)
+                order
+            )
+
         return data
 
     def __parse_int_data(self, offset, start, stop, bit_width, d_range, order):
@@ -275,20 +261,31 @@ class FlowData(object):
             return None
         return tmp
 
-    def __parse_float_data(self, offset, start, stop, data_type, order):
-        """Parse out and return float list data from FCS file"""
-        num_items = (stop - start + 1) / calcsize(data_type)
+    def __parse_non_int_data(self, offset, start, stop, data_type, order):
+        """Parse out and return float or ASCII list data from FCS file"""
+        data_type_size = calcsize(data_type)
+        data_sect_size = stop - start + 1
+        data_mod = data_sect_size % data_type_size
 
-        tmp = unpack('%s%d%s' % (order, num_items, data_type),
-                     self.__read_bytes(offset, start, stop))
-        return tmp
+        if data_mod > 0:
+            # Some FCS files incorrectly report the location of the last data byte
+            # as the last byte exclusive of the data section rather than the last
+            # byte inclusive of the data section. This means the stop location will
+            # be off by +1. Technically, this is an invalid FCS file, but since
+            # it is so common, we will try to parse these files. For any discrepancy
+            # other than +1 we throw an error
+            if data_mod == 1:
+                stop = stop - 1
+                data_sect_size = data_sect_size - 1
+            else:
+                raise ValueError("Unable to determine the correct byte offsets for event data")
 
-    def __parse_ascii_data(self, offset, start, stop, data_type, order):
-        """Parse out ascii encoded data from FCS file"""
-        num_items = (stop - start + 1) / calcsize(data_type)
+        num_items = data_sect_size / data_type_size
 
-        tmp = unpack('%s%d%s' % (order, num_items, data_type),
-                     self.__read_bytes(offset, start, stop))
+        tmp = unpack(
+            '%s%d%s' % (order, num_items, data_type),
+            self.__read_bytes(offset, start, stop)
+        )
         return tmp
 
     @staticmethod
