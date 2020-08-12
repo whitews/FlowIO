@@ -37,6 +37,11 @@ class FlowData(object):
 
         self.cur_offset = 0
 
+        # Get actual file size for sanity check of data section
+        self._fh.seek(0, os.SEEK_END)
+        self.file_size = self._fh.tell()
+        self._fh.seek(self.cur_offset)  # reset to beginning before parsing
+
         # parse headers
         self.header = self.__parse_header(self.cur_offset)
 
@@ -71,12 +76,9 @@ class FlowData(object):
         except KeyError:
             d_stop = self.header['data_end']
 
-        # account for LMD reporting wrong values for size of the data segment
-        lmd = self.__fix_lmd(
-            self.cur_offset,
-            self.header['text_start'],
-            self.header['text_stop'])
-        d_stop += lmd
+        if d_stop > self.file_size:
+            raise EOFError("FCS header indicates data section greater than file size")
+
         self.events = self.__parse_data(
             self.cur_offset,
             d_start,
