@@ -58,6 +58,7 @@ class FlowData(object):
             a_stop = self.text['endanalysis']
         except KeyError:
             a_stop = self.header['analysis_end']
+
         self.analysis = self.__parse_analysis(self.cur_offset, a_start, a_stop)
 
         # parse data
@@ -80,7 +81,8 @@ class FlowData(object):
             self.cur_offset,
             d_start,
             d_stop,
-            self.text)
+            self.text
+        )
 
         try:
             unused_path, self.name = os.path.split(self._fh.name)
@@ -89,9 +91,16 @@ class FlowData(object):
 
         self._fh.close()
 
+    def __repr__(self):
+        if hasattr(self, 'name'):
+            name = self.name
+        else:
+            name = "Unread FCS data"
+
+        return f'{self.__class__.__name__}({name})'
+
     def __read_bytes(self, offset, start, stop):
         """Read in bytes from start to stop inclusive."""
-
         self._fh.seek(offset + start)
 
         return self._fh.read(stop - start + 1)
@@ -148,7 +157,9 @@ class FlowData(object):
             return self.__parse_pairs(text)
 
     def __parse_data(self, offset, start, stop, text):
-        """return array of data segment of FCS file"""
+        """
+        Return array of data segment of FCS file
+        """
         data_type = text['datatype']
         mode = text['mode']
         if mode == 'c' or mode == 'u':
@@ -161,10 +172,9 @@ class FlowData(object):
         elif text['byteord'] == '4,3,2,1' or text['byteord'] == '2,1':
             order = '>'
         else:
-            warn(
-                "unsupported byte order %s , using default @" % text['byteord'])
+            warn("unsupported byte order %s , using default @" % text['byteord'])
             order = '@'
-            # from here on out we assume mode l (list)
+            # from here on out we assume mode "l" (list)
 
         bit_width = []
         data_range = []
@@ -173,8 +183,7 @@ class FlowData(object):
             try:
                 data_range.append(int(text['p%dr' % i]))
             except ValueError:
-                #  we found an FCS file where one channel was using
-                # exp notation for the int
+                # Found an FCS channel using exponential notation for the int
                 data_range.append(int(float(text['p%dr' % i])))
 
         if data_type.lower() == 'i':
@@ -307,7 +316,7 @@ class FlowData(object):
 
     @staticmethod
     def __mask_integer(b, ub):
-        """return bit mask of an integer and a bit witdh"""
+        """return bit mask of an integer and a bit width"""
         if b == 8:
             return 0xFF >> (b - ub)
         elif b == 16:
@@ -450,9 +459,3 @@ class FlowData(object):
         fh.write(str(0))
 
         fh.close()
-
-    def __unicode__(self):
-        return self.name
-
-    def __repr__(self):
-        return self.name
