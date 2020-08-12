@@ -154,6 +154,14 @@ class FlowData(object):
             return {}
         else:
             text = self.__read_bytes(offset, start, stop)
+
+            try:
+                # try UTF-8 first
+                text = text.decode()
+            except UnicodeDecodeError:
+                # next best guess is Latin-1, if not that either, we throw the exception
+                text = text.decode("ISO-8859-1")
+
             return self.__parse_pairs(text)
 
     def __parse_data(self, offset, start, stop, text):
