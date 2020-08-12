@@ -51,11 +51,11 @@ class FlowData(object):
 
         # parse analysis
         try:
-            a_start = self.text['beginanalysis']
+            a_start = int(self.text['beginanalysis'])
         except KeyError:
             a_start = self.header['analysis_start']
         try:
-            a_stop = self.text['endanalysis']
+            a_stop = int(self.text['endanalysis'])
         except KeyError:
             a_stop = self.header['analysis_end']
 
