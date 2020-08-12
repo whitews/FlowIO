@@ -296,9 +296,6 @@ class FlowData(object):
         """return key/value pairs from a delimited string"""
         delimiter = text[0]
 
-        if delimiter != text[-1]:
-            warn("text in segment does not start and end with delimiter")
-
         if delimiter == r'|':
             delimiter = '\|'
         elif delimiter == r'\a'[0]:  # test for delimiter being \
