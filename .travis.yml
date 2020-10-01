@@ -1,0 +1,12 @@
+dist: xenial
+language: python
+python:
+  - "3.6"
+  - "3.7"
+install:
+  - pip install codecov
+script:
+  - coverage run --source flowio run_tests.py
+
+after_success:
+  - codecov
