@@ -216,16 +216,35 @@ class FlowData(object):
         """Parse out and return integer list data from FCS file"""
 
         if reduce(and_, [item in [8, 16, 32] for item in bit_width]):
-            if len(set(bit_width)) == 1:  # uniform size for all parameters
+            # We have a uniform bit width for all parameters,
+            # use the first value to determine the number of actual events
+            if len(set(bit_width)) == 1:
                 # calculate how much data to read in.
-                num_items = (stop - start + 1) / calcsize(
-                    self.__format_integer(bit_width[0]))
+                data_type_size = bit_width[0] / 8
+                data_sect_size = stop - start + 1
+                data_mod = data_sect_size % data_type_size
+
+                if data_mod > 0:
+                    # Some FCS files incorrectly report the location of the last data byte
+                    # as the last byte exclusive of the data section rather than the last
+                    # byte inclusive of the data section. This means the stop location will
+                    # be off by +1. Technically, this is an invalid FCS file, but since
+                    # it is so common, we will try to parse these files. For any discrepancy
+                    # other than +1 we throw an error
+                    if data_mod == 1:
+                        stop = stop - 1
+                        data_sect_size = data_sect_size - 1
+                    else:
+                        raise ValueError("Unable to determine the correct byte offsets for event data")
+
+                num_items = data_sect_size / data_type_size
 
                 # unpack to a list
                 tmp = unpack(
                     '%s%d%s' %
                     (
-                        order, num_items,
+                        order,
+                        num_items,
                         self.__format_integer(bit_width[0])
                     ),
                     self.__read_bytes(offset, start, stop)
