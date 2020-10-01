@@ -4,6 +4,8 @@
 [![PyPI pyversions](https://img.shields.io/pypi/pyversions/flowio.svg)](https://pypi.python.org/pypi/flowio/)
 [![PyPI version](https://img.shields.io/pypi/v/flowio.svg?colorB=blue)](https://pypi.python.org/pypi/flowio/)
 
+[![Build Status](https://travis-ci.com/whitews/FlowIO.svg?branch=master)](https://travis-ci.com/whitews/FlowKit)
+
 ## Overview
 
 FlowIO is a Python library for reading and writing Flow Cytometry Standard (FCS) files. 
