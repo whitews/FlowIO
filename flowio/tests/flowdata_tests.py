@@ -1,4 +1,5 @@
 import unittest
+import os
 import io
 from flowio import FlowData
 
@@ -6,6 +7,7 @@ from flowio import FlowData
 class FlowDataTestCase(unittest.TestCase):
     def setUp(self):
         self.flow_data = FlowData('examples/fcs_files/3FITC_4PE_004.fcs')
+        self.flow_data_spill = FlowData('examples/fcs_files/100715.fcs')
         
     def test_get_points(self):
         self.assertEqual(
@@ -20,6 +22,15 @@ class FlowDataTestCase(unittest.TestCase):
         with open('examples/fcs_files/3FITC_4PE_004.fcs', 'rb') as f:
             mem_file = io.BytesIO(f.read())
             FlowData(mem_file)
+
+    def test_write_fcs(self):
+        file_name = 'flowio/tests/flowio_test_write_fcs.fcs'
+        self.flow_data_spill.write_fcs(file_name)
+
+        fcs_export = FlowData(file_name)
+
+        self.assertIsInstance(fcs_export, FlowData)
+        os.unlink(file_name)
 
     def test_issue_03(self):
         """
