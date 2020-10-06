@@ -86,6 +86,8 @@ class FlowData(object):
             self.text
         )
 
+        self.channels = self._parse_channels()
+
         try:
             unused_path, self.name = os.path.split(self._fh.name)
         except (AttributeError, TypeError):
@@ -364,8 +366,7 @@ class FlowData(object):
 
         return f
 
-    @property
-    def channels(self):
+    def _parse_channels(self):
         """
         Returns a dictionary of channels, with key as channel number
         and value is a dictionary of the PnN and PnS text
