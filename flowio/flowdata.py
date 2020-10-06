@@ -315,7 +315,7 @@ class FlowData(object):
         delimiter = text[0]
 
         if delimiter == r'|':
-            delimiter = '\|'
+            delimiter = r'\|'
         elif delimiter == r'\a'[0]:  # test for delimiter being \
             delimiter = '\\\\'  # regex will require it to be \\
 
@@ -372,7 +372,7 @@ class FlowData(object):
         and value is a dictionary of the PnN and PnS text
         """
         channels = dict()
-        regex_pnn = re.compile("^p(\d+)n$", re.IGNORECASE)
+        regex_pnn = re.compile(r"^p(\d+)n$", re.IGNORECASE)
 
         for i in self.text.keys():
             match = regex_pnn.match(i)
