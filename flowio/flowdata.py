@@ -25,10 +25,7 @@ class FlowData(object):
         filename: an FCS filename
         """
         if isinstance(filename, basestring):
-            try:
-                self._fh = open(str(filename), 'rb')
-            except IOError:
-                raise
+            self._fh = open(str(filename), 'rb')
         elif isinstance(filename, IOBase):
             self._fh = filename
         else:
