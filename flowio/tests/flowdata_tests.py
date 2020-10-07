@@ -23,6 +23,10 @@ class FlowDataTestCase(unittest.TestCase):
             mem_file = io.BytesIO(f.read())
             FlowData(mem_file)
 
+    def test_load_non_file_input(self):
+        non_file = object()
+        self.assertRaises(TypeError, FlowData, non_file)
+
     def test_write_fcs(self):
         file_name = 'flowio/tests/flowio_test_write_fcs.fcs'
         self.flow_data_spill.write_fcs(file_name)
