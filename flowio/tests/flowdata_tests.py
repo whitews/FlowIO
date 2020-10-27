@@ -7,6 +7,7 @@ from flowio import FlowData
 
 class FlowDataTestCase(unittest.TestCase):
     def setUp(self):
+        self.maxDiff = None
         self.flow_data = FlowData('examples/fcs_files/3FITC_4PE_004.fcs')
         self.flow_data_spill = FlowData('examples/fcs_files/100715.fcs')
         
@@ -38,10 +39,10 @@ class FlowDataTestCase(unittest.TestCase):
         os.unlink(file_name)
 
     def test_write_fcs_preserves_channels(self):
-        readdata = FlowData('examples/fcs_files/G11.fcs')
+        readdata = FlowData('examples/fcs_files/100715.fcs')
         expected = readdata.channels
 
-        with tempfile.NamedTemporaryFile('w') as tmpfile:
+        with tempfile.NamedTemporaryFile() as tmpfile:
             readdata.write_fcs(tmpfile.name)
             outdata = FlowData(tmpfile.name)
             actually = outdata.channels

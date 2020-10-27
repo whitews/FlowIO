@@ -392,16 +392,14 @@ class FlowData(object):
         return channels
 
     def write_fcs(self, filename, extra=None, extra_non_standard=None):
-        pnn_labels = []
-        pns_labels = []
+        pnn_labels = [''] * len(self.channels)
+        pns_labels = [''] * len(self.channels)
 
-        for k in sorted(self.channels.keys()):
-            pnn_labels.append(self.channels[k]['PnN'])
+        for k in self.channels:
+            pnn_labels[int(k) - 1] = self.channels[k]['PnN']
 
             if 'PnS' in self.channels[k]:
-                pns_labels.append(self.channels[k]['PnS'])
-            else:
-                pns_labels.append('')
+                pns_labels[int(k) - 1] = self.channels[k]['PnS']
 
         if 'spill' in self.text:
             spill = self.text['spill']
