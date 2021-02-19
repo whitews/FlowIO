@@ -99,7 +99,7 @@ class FlowData(object):
         else:
             name = "Unread FCS data"
 
-        return f'{self.__class__.__name__}({name})'
+        return '%s(%s)' % (self.__class__.__name__, name)
 
     def __read_bytes(self, offset, start, stop):
         """Read in bytes from start to stop inclusive."""
