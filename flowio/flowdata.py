@@ -316,6 +316,8 @@ class FlowData(object):
             delimiter = r'\|'
         elif delimiter == r'\a'[0]:  # test for delimiter being \
             delimiter = '\\\\'  # regex will require it to be \\
+        elif delimiter == r'*':
+            delimiter = r'\*'
 
         tmp = text[1:-1].replace('$', '')
         # match the delimited character unless it's doubled
