@@ -27,11 +27,12 @@ class FlowDataTestCase(unittest.TestCase):
             FlowData(mem_file)
 
     def test_load_temp_file(self):
-        with tempfile.TemporaryFile() as tmpfile:
+        with tempfile.TemporaryFile() as tmp_file:
             with open('examples/fcs_files/3FITC_4PE_004.fcs', 'r+b') as f:
-                shutil.copyfileobj(f, tmpfile)
-            tmpfile.seek(0)
-            out_data = FlowData(tmpfile)
+                shutil.copyfileobj(f, tmp_file)
+            tmp_file.seek(0)
+            out_data = FlowData(tmp_file)
+        self.assertIsInstance(out_data, FlowData)
 
     def test_load_non_file_input(self):
         non_file = object()
