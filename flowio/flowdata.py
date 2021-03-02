@@ -20,19 +20,14 @@ class FlowData(object):
     """
     Object representing a Flow Cytometry Standard (FCS) file
     """
-    def __init__(self, filename):
+    def __init__(self, filename_or_handle):
         """
         filename: an FCS filename
         """
-        if isinstance(filename, basestring):
-            self._fh = open(str(filename), 'rb')
-        elif isinstance(filename, IOBase):
-            self._fh = filename
+        if isinstance(filename_or_handle, basestring):
+            self._fh = open(str(filename_or_handle), 'rb')
         else:
-            raise TypeError(
-                "Filename must be a file path or a file handle " +
-                "(either 'file' type or io.IOBase")
-
+            self._fh = filename_or_handle
         self.cur_offset = 0
 
         # Get actual file size for sanity check of data section
