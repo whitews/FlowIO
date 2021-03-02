@@ -4,7 +4,6 @@ import os
 import io
 import tempfile
 from flowio import FlowData
-import pandas as pd
 
 
 class FlowDataTestCase(unittest.TestCase):
