@@ -99,11 +99,7 @@ class FlowData(object):
         """Read in bytes from start to stop inclusive."""
         self._fh.seek(offset + start)
 
-        try:
-            # noinspection PyUnresolvedReferences
-            data = self._fh.read(stop - start + 1)
-        except AttributeError:
-            raise TypeError("The FCS file-like object has no 'read' method and is incompatible with FlowIO")
+        data = self._fh.read(stop - start + 1)
 
         return data
 
