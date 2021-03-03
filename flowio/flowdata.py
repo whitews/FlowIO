@@ -1,4 +1,3 @@
-from io import IOBase
 from math import log
 from operator import and_
 from struct import calcsize, unpack
