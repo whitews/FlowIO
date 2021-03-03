@@ -244,7 +244,7 @@ class FlowData(object):
             # e.g. 8, 8, 16,8, 32 ... do one at a time
             else:
                 log2 = self.__log_factory(2)
-                unused_bit_widths = map(int, map(log2, d_range))
+                unused_bit_widths = list(map(int, map(log2, d_range)))
                 tmp = []
                 cur = start
                 while cur < stop:
