@@ -1,3 +1,4 @@
+import shutil
 import unittest
 import os
 import io
@@ -10,7 +11,7 @@ class FlowDataTestCase(unittest.TestCase):
         self.maxDiff = None
         self.flow_data = FlowData('examples/fcs_files/3FITC_4PE_004.fcs')
         self.flow_data_spill = FlowData('examples/fcs_files/100715.fcs')
-        
+
     def test_get_points(self):
         self.assertEqual(
             len(self.flow_data.events) / self.flow_data.channel_count,
@@ -25,9 +26,17 @@ class FlowDataTestCase(unittest.TestCase):
             mem_file = io.BytesIO(f.read())
             FlowData(mem_file)
 
+    def test_load_temp_file(self):
+        with tempfile.TemporaryFile() as tmp_file:
+            with open('examples/fcs_files/3FITC_4PE_004.fcs', 'r+b') as f:
+                shutil.copyfileobj(f, tmp_file)
+            tmp_file.seek(0)
+            out_data = FlowData(tmp_file)
+        self.assertIsInstance(out_data, FlowData)
+
     def test_load_non_file_input(self):
         non_file = object()
-        self.assertRaises(TypeError, FlowData, non_file)
+        self.assertRaises(AttributeError, FlowData, non_file)
 
     def test_write_fcs(self):
         file_name = 'flowio/tests/flowio_test_write_fcs.fcs'
