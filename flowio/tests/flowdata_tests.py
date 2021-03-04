@@ -47,7 +47,16 @@ class FlowDataTestCase(unittest.TestCase):
         self.assertIsInstance(fcs_export, FlowData)
         os.unlink(file_name)
 
-    def test_parse_int_data(self):
+    def test_parse_var_int_data(self):
+        event_values = [
+            49135, 61373, 48575, 49135, 61373, 48575, 7523, 598, 49135, 61373,
+            48575, 49135, 61373, 48575, 28182, 61200, 48575, 49135, 32445, 30797,
+            19057, 49135, 61373, 48575, 5969, 142482809,
+            61266, 48575, 49135, 20925, 61265, 48575, 27961, 25200, 61287, 48575, 9795,
+            49135, 29117, 49135, 61373, 48575, 61228, 48575, 22, 21760, 49135,
+            20413, 49135, 23997, 19807, 3220139858
+        ]
+
         fcs_file = "examples/fcs_files/variable_int_example.fcs"
         sample = FlowData(fcs_file)
         self.assertIsInstance(sample, FlowData)
