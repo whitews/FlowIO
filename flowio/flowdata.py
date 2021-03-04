@@ -1,4 +1,3 @@
-from math import log
 from operator import and_
 from struct import calcsize, unpack, iter_unpack
 from warnings import warn
@@ -173,14 +172,8 @@ class FlowData(object):
             # from here on out we assume mode "l" (list)
 
         bit_width = []
-        data_range = []
         for i in range(1, int(text['par']) + 1):
             bit_width.append(int(text['p%db' % i]))
-            try:
-                data_range.append(int(text['p%dr' % i]))
-            except ValueError:
-                # Found an FCS channel using exponential notation for the int
-                data_range.append(int(float(text['p%dr' % i])))
 
         if data_type.lower() == 'i':
             data = self.__parse_int_data(
@@ -188,7 +181,6 @@ class FlowData(object):
                 start,
                 stop,
                 bit_width,
-                data_range,
                 order
             )
         else:
@@ -250,8 +242,7 @@ class FlowData(object):
             return None
         return tmp
 
-    def __extract_var_length_int(self, bit_width, d_range, offset, order, start, stop):
-        log2 = self.__log_factory(2)
+    def __extract_var_length_int(self, bit_width, offset, order, start, stop):
         data_format = order
         for cur_width in bit_width:
             data_format += '%s' % self.__format_integer(cur_width)
