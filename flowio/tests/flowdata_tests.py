@@ -59,7 +59,8 @@ class FlowDataTestCase(unittest.TestCase):
 
         fcs_file = "examples/fcs_files/variable_int_example.fcs"
         sample = FlowData(fcs_file)
-        self.assertIsInstance(sample, FlowData)
+
+        self.assertListEqual(event_values, sample.events)
 
     def test_write_fcs_preserves_channels(self):
         orig_fd = FlowData('examples/fcs_files/100715.fcs')
