@@ -241,9 +241,9 @@ class FlowData(object):
                 )
 
             # parameter sizes are different
-            # e.g. 8, 8, 16,8, 32 ...
+            # e.g. 8, 8, 16, 8, 32 ...
             else:
-                tmp = self.__extract_var_length_int(bit_width, d_range, offset, order, start, stop)
+                tmp = self.__extract_var_length_int(bit_width, offset, order, start, stop)
 
         else:  # non standard bit width...  Does this happen?
             warn('Non-standard bit width for data segments')
