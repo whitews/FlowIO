@@ -12,6 +12,12 @@ class FlowDataTestCase(unittest.TestCase):
         self.flow_data = FlowData('examples/fcs_files/3FITC_4PE_004.fcs')
         self.flow_data_spill = FlowData('examples/fcs_files/100715.fcs')
 
+    def test_string_representation(self):
+        self.assertEqual(
+            str(self.flow_data),
+            "FlowData(3FITC_4PE_004.fcs)"
+        )
+
     def test_get_points(self):
         self.assertEqual(
             len(self.flow_data.events) / self.flow_data.channel_count,
