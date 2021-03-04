@@ -194,7 +194,7 @@ class FlowData(object):
 
         return data
 
-    def __parse_int_data(self, offset, start, stop, bit_width, d_range, order):
+    def __parse_int_data(self, offset, start, stop, bit_width, order):
         """Parse out and return integer list data from FCS file"""
 
         if reduce(and_, [item in [8, 16, 32] for item in bit_width]):
