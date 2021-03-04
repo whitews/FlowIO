@@ -1,4 +1,3 @@
-from io import IOBase
 from math import log
 from operator import and_
 from struct import calcsize, unpack, iter_unpack
@@ -100,11 +99,7 @@ class FlowData(object):
         """Read in bytes from start to stop inclusive."""
         self._fh.seek(offset + start)
 
-        try:
-            # noinspection PyUnresolvedReferences
-            data = self._fh.read(stop - start + 1)
-        except AttributeError:
-            raise TypeError("The FCS file-like object has no 'read' method and is incompatible with FlowIO")
+        data = self._fh.read(stop - start + 1)
 
         return data
 
@@ -249,6 +244,7 @@ class FlowData(object):
             # e.g. 8, 8, 16,8, 32 ...
             else:
                 tmp = self.__extract_var_length_int(bit_width, d_range, offset, order, start, stop)
+
         else:  # non standard bit width...  Does this happen?
             warn('Non-standard bit width for data segments')
             return None
@@ -257,7 +253,7 @@ class FlowData(object):
     def __extract_var_length_int(self, bit_width, d_range, offset, order, start, stop):
         log2 = self.__log_factory(2)
         data_format = order
-        for i, cur_width in enumerate(bit_width):
+        for cur_width in bit_width:
             data_format += '%s' % self.__format_integer(cur_width)
 
         tuple_tmp = iter_unpack(data_format, self.__read_bytes(offset, start, stop))
