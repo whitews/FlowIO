@@ -1,6 +1,6 @@
 from math import log
 from operator import and_
-from struct import calcsize, unpack
+from struct import calcsize, unpack, iter_unpack
 from warnings import warn
 import os
 import re
@@ -241,33 +241,23 @@ class FlowData(object):
                 )
 
             # parameter sizes are different
-            # e.g. 8, 8, 16,8, 32 ... do one at a time
+            # e.g. 8, 8, 16,8, 32 ...
             else:
-                log2 = self.__log_factory(2)
-                unused_bit_widths = list(map(int, map(log2, d_range)))
-                tmp = []
-                cur = start
-                while cur < stop:
-                    for i, cur_width in enumerate(bit_width):
-                        bit_mask = self.__mask_integer(
-                            cur_width,
-                            unused_bit_widths[i])
-                        n_bytes = cur_width / 8
-                        bin_string = self.__read_bytes(
-                            offset, cur,
-                            cur + n_bytes - 1)
-                        cur += n_bytes
-                        val = bit_mask & unpack(
-                            '%s%s' %
-                            (
-                                order,
-                                self.__format_integer(cur_width)
-                            ),
-                            bin_string)[0]
-                        tmp.append(val)
+                tmp = self.__extract_var_length_int(bit_width, d_range, offset, order, start, stop)
+
         else:  # non standard bit width...  Does this happen?
             warn('Non-standard bit width for data segments')
             return None
+        return tmp
+
+    def __extract_var_length_int(self, bit_width, d_range, offset, order, start, stop):
+        log2 = self.__log_factory(2)
+        data_format = order
+        for cur_width in bit_width:
+            data_format += '%s' % self.__format_integer(cur_width)
+
+        tuple_tmp = iter_unpack(data_format, self.__read_bytes(offset, start, stop))
+        tmp = [ti for t in tuple_tmp for ti in t]
         return tmp
 
     def __parse_non_int_data(self, offset, start, stop, data_type, order):
