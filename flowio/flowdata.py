@@ -322,29 +322,9 @@ class FlowData(object):
         elif b == 32:
             return 'I'
         else:
-            print("Cannot handle integers of bit size %d" % b)
-            return None
-
-    @staticmethod
-    def __mask_integer(b, ub):
-        """return bit mask of an integer and a bit width"""
-        if b == 8:
-            return 0xFF >> (b - ub)
-        elif b == 16:
-            return 0xFFFF >> (b - ub)
-        elif b == 32:
-            return 0xFFFFFFFF >> (b - ub)
-        else:
-            print("Cannot handle integers of bit size %d" % b)
-            return None
-
-    @staticmethod
-    def __log_factory(base):
-        """factory for various bases or the log function"""
-        def f(x):
-            return log(x, base)
-
-        return f
+            raise ValueError(
+                "Invalid integer bit size (%d) for event data. Compatible sizes are 8, 16, & 32." % b
+            )
 
     def _parse_channels(self):
         """
