@@ -20,7 +20,17 @@ class FlowData(object):
     """
     def __init__(self, filename_or_handle, ignore_offset_error=False):
         """
-        filename: an FCS filename
+        Reads an FCS file from a file path or file handle. FCS versions 2.0, 3.0, and 3.1 are supported.
+
+        Note:
+            Some FCS files incorrectly report the location of the last data byte
+            as the last byte exclusive of the data section rather than the last
+            byte inclusive of the data section. Technically, these are invalid
+            FCS files but these are not corrupted data files. To attempt to read
+            in these files, set the `ignore_offset_error` option to True.
+
+        :param filename_or_handle: a path string or a file handle for an FCS file
+        :param ignore_offset_error:
         """
         if isinstance(filename_or_handle, basestring):
             self._fh = open(str(filename_or_handle), 'rb')
@@ -352,6 +362,14 @@ class FlowData(object):
         return channels
 
     def write_fcs(self, filename, extra=None, extra_non_standard=None):
+        """
+        Export FlowData instance as a new FCS file
+
+        :param filename: name of exported FCS file
+        :param extra: an optional dictionary for adding extra standard keywords/values
+        :param extra_non_standard: an optional dictionary for adding extra non-standard keywords/values
+        :return: None
+        """
         pnn_labels = [''] * len(self.channels)
         pns_labels = [''] * len(self.channels)
 
