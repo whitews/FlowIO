@@ -13,26 +13,23 @@ def create_fcs(
         extra_non_standard=None,
         opt_channel_names=None):
     """
-    spill is optional text value that should conform to version 3.1 of the
-    FCS Standard 3.1. A proper spillover matrix shall have the first value
-    corresponding to the number of compensated fluorescence channels followed
-    by the $PnN names which should match the given channel_names argument. All
-    values in the spill text string should be comma delimited with no newline
-    characters.
+    Create a new FCS file from a list of event data.
 
-    cyt is an optional text string to use for the $CYT field
+    Note:
+        A proper spillover matrix shall have the first value corresponding to the
+        number of compensated fluorescence channels followed by the $PnN names
+        which should match the given channel_names argument. All values in the
+        spill text string should be comma delimited with no newline characters.
 
-    extra is an option dictionary for adding extra non-standard keywords/values
-
-    :param event_data:
-    :param channel_names:
-    :param file_handle:
-    :param spill:
-    :param cyt:
-    :param date:
-    :param extra:
-    :param extra_non_standard:
-    :param opt_channel_names:
+    :param event_data: list of event data (flattened 1-D list)
+    :param channel_names: list of channel labels to use for PnN fields
+    :param file_handle: file handle for new FCS file
+    :param spill: optional text for spillover matrix conforming to FCS 3.1 specification
+    :param cyt: optional text string to use for the $CYT field
+    :param date: optional text string to use for the $DATE field
+    :param extra: an optional dictionary for adding extra standard keywords/values
+    :param extra_non_standard: an optional dictionary for adding extra non-standard keywords/values
+    :param opt_channel_names: optional list of channel labels to use for PnS fields
 
     :return:
     """
