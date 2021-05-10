@@ -18,7 +18,7 @@ class FlowData(object):
     """
     Object representing a Flow Cytometry Standard (FCS) file
     """
-    def __init__(self, filename_or_handle):
+    def __init__(self, filename_or_handle, ignore_offset_error=False):
         """
         filename: an FCS filename
         """
@@ -27,6 +27,13 @@ class FlowData(object):
         else:
             self._fh = filename_or_handle
         self.cur_offset = 0
+
+        self._ignore_offset = ignore_offset_error
+
+        try:
+            unused_path, self.name = os.path.split(self._fh.name)
+        except (AttributeError, TypeError):
+            self.name = 'InMemoryFile'
 
         # Get actual file size for sanity check of data section
         self._fh.seek(0, os.SEEK_END)
@@ -78,11 +85,6 @@ class FlowData(object):
         )
 
         self.channels = self._parse_channels()
-
-        try:
-            unused_path, self.name = os.path.split(self._fh.name)
-        except (AttributeError, TypeError):
-            self.name = 'InMemoryFile'
 
         self._fh.close()
 
@@ -194,6 +196,44 @@ class FlowData(object):
 
         return data
 
+    def __calc_data_item_count(self, start, stop, data_type_size):
+        # calculate how much data to read in.
+        data_sect_size = stop - start + 1
+        data_mod = data_sect_size % data_type_size
+
+        if data_mod > 0:
+            # Some FCS files incorrectly report the location of the last data byte
+            # as the last byte exclusive of the data section rather than the last
+            # byte inclusive of the data section. This means the stop location will
+            # be off by +1. Technically, this is an invalid FCS file, but since
+            # it is so common, we will try to parse these files. For any discrepancy
+            # other than +1 we throw an error
+            if data_mod == 1 and self._ignore_offset:
+                # warn user that the offset is off
+                warn_msg = "FCS file %s reported incorrect data offset. " % self.name
+                warn_msg += "Attempting to parse data section, but event data should be "
+                warn_msg += "reviewed before trusting this file."
+                warn(warn_msg)
+
+                stop = stop - 1
+                data_sect_size = data_sect_size - 1
+            elif data_mod == 1 and not self._ignore_offset:
+                # attempt to close file handle before raising error
+                self._fh.close()
+
+                err_msg = "FCS file %s reports a data offset that is off by 1. " % self.name
+                err_msg += "Set `ignore_offset_error=True` to force reading in this file."
+                raise ValueError(err_msg)
+            else:
+                # attempt to close file handle before raising error
+                self._fh.close()
+
+                raise ValueError("Unable to determine the correct byte offsets for event data")
+
+        num_items = data_sect_size / data_type_size
+
+        return num_items, stop
+
     def __parse_int_data(self, offset, start, stop, bit_width, order):
         """Parse out and return integer list data from FCS file"""
 
@@ -201,25 +241,8 @@ class FlowData(object):
             # We have a uniform bit width for all parameters,
             # use the first value to determine the number of actual events
             if len(set(bit_width)) == 1:
-                # calculate how much data to read in.
                 data_type_size = bit_width[0] / 8
-                data_sect_size = stop - start + 1
-                data_mod = data_sect_size % data_type_size
-
-                if data_mod > 0:
-                    # Some FCS files incorrectly report the location of the last data byte
-                    # as the last byte exclusive of the data section rather than the last
-                    # byte inclusive of the data section. This means the stop location will
-                    # be off by +1. Technically, this is an invalid FCS file, but since
-                    # it is so common, we will try to parse these files. For any discrepancy
-                    # other than +1 we throw an error
-                    if data_mod == 1:
-                        stop = stop - 1
-                        data_sect_size = data_sect_size - 1
-                    else:
-                        raise ValueError("Unable to determine the correct byte offsets for event data")
-
-                num_items = data_sect_size / data_type_size
+                num_items, stop = self.__calc_data_item_count(start, stop, data_type_size)
 
                 # unpack to a list
                 tmp = unpack(
@@ -254,23 +277,7 @@ class FlowData(object):
     def __parse_non_int_data(self, offset, start, stop, data_type, order):
         """Parse out and return float or ASCII list data from FCS file"""
         data_type_size = calcsize(data_type)
-        data_sect_size = stop - start + 1
-        data_mod = data_sect_size % data_type_size
-
-        if data_mod > 0:
-            # Some FCS files incorrectly report the location of the last data byte
-            # as the last byte exclusive of the data section rather than the last
-            # byte inclusive of the data section. This means the stop location will
-            # be off by +1. Technically, this is an invalid FCS file, but since
-            # it is so common, we will try to parse these files. For any discrepancy
-            # other than +1 we throw an error
-            if data_mod == 1:
-                stop = stop - 1
-                data_sect_size = data_sect_size - 1
-            else:
-                raise ValueError("Unable to determine the correct byte offsets for event data")
-
-        num_items = data_sect_size / data_type_size
+        num_items, stop = self.__calc_data_item_count(start, stop, data_type_size)
 
         tmp = unpack(
             '%s%d%s' % (order, num_items, data_type),
