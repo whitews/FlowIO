@@ -18,10 +18,11 @@ class FlowDataTestCase(unittest.TestCase):
             "FlowData(3FITC_4PE_004.fcs)"
         )
 
-    def test_get_points(self):
+    def test_event_count(self):
         self.assertEqual(
             len(self.flow_data.events) / self.flow_data.channel_count,
-            int(self.flow_data.text['tot']))
+            int(self.flow_data.text['tot'])
+        )
 
     def test_get_text(self):
         self.assertEqual(self.flow_data.text['cyt'], 'FACScan')
