@@ -23,14 +23,14 @@ class FlowData(object):
         Reads an FCS file from a file path or file handle. FCS versions 2.0, 3.0, and 3.1 are supported.
 
         Note:
-            Some FCS files incorrectly report the location of the last data byte
-            as the last byte exclusive of the data section rather than the last
-            byte inclusive of the data section. Technically, these are invalid
-            FCS files but these are not corrupted data files. To attempt to read
-            in these files, set the `ignore_offset_error` option to True.
+        Some FCS files incorrectly report the location of the last data byte
+        as the last byte exclusive of the data section rather than the last
+        byte inclusive of the data section. Technically, these are invalid
+        FCS files but these are not corrupted data files. To attempt to read
+        in these files, set the `ignore_offset_error` option to True.
 
         :param filename_or_handle: a path string or a file handle for an FCS file
-        :param ignore_offset_error:
+        :param ignore_offset_error: option to ignore data offset error (see above note), default is False
         """
         if isinstance(filename_or_handle, basestring):
             self._fh = open(str(filename_or_handle), 'rb')
