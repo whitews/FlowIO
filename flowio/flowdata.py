@@ -1,5 +1,6 @@
+import array
 from operator import and_
-from struct import calcsize, unpack, iter_unpack
+from struct import calcsize, iter_unpack
 from warnings import warn
 import os
 import re
@@ -136,30 +137,39 @@ class FlowData(object):
 
     def __parse_text(self, offset, start, stop):
         """return parsed text segment of FCS file"""
-        text = self.__read_bytes(offset, start, stop)
+        num_items = (stop - start + 1)
+        self._fh.seek(offset + start)
+        tmp = array.array('b')
+        tmp.fromfile(self._fh, int(num_items))
+        tmp = tmp.tobytes()
+
         try:
             # try UTF-8 first
-            text = text.decode()
+            tmp = tmp.decode()
         except UnicodeDecodeError:
             # next best guess is Latin-1, if not that either, we throw the exception
-            text = text.decode("ISO-8859-1")
-        return self.__parse_pairs(text)
+            tmp = tmp.decode("ISO-8859-1")
+        return self.__parse_pairs(tmp)
 
     def __parse_analysis(self, offset, start, stop):
         """return parsed analysis segment of FCS file"""
         if start == stop:
             return {}
         else:
-            text = self.__read_bytes(offset, start, stop)
+            num_items = (stop - start + 1)
+            self._fh.seek(offset + start)
+            tmp = array.array('b')
+            tmp.fromfile(self._fh, int(num_items))
+            tmp = tmp.tobytes()
 
             try:
                 # try UTF-8 first
-                text = text.decode()
+                tmp = tmp.decode()
             except UnicodeDecodeError:
                 # next best guess is Latin-1, if not that either, we throw the exception
-                text = text.decode("ISO-8859-1")
+                tmp = tmp.decode("ISO-8859-1")
 
-            return self.__parse_pairs(text)
+            return self.__parse_pairs(tmp)
 
     def __parse_data(self, offset, start, stop, text):
         """
@@ -252,20 +262,16 @@ class FlowData(object):
                 data_type_size = bit_width[0] / 8
                 num_items, stop = self.__calc_data_item_count(start, stop, data_type_size)
 
-                # unpack to a list
-                tmp = unpack(
-                    '%s%d%s' %
-                    (
-                        order,
-                        num_items,
-                        self.__format_integer(bit_width[0])
-                    ),
-                    self.__read_bytes(offset, start, stop)
-                )
+                self._fh.seek(offset + start)
+                tmp = array.array(self.__format_integer(bit_width[0]))
+                tmp.fromfile(self._fh, int(num_items))
+                if order == '>':
+                    tmp.byteswap()
 
             # parameter sizes are different
             # e.g. 8, 8, 16, 8, 32 ...
             else:
+                # can't use array for heterogeneous bit widths
                 tmp = self.__extract_var_length_int(bit_width, offset, order, start, stop)
 
         else:  # non standard bit width...  Does this happen?
@@ -278,6 +284,8 @@ class FlowData(object):
         for cur_width in bit_width:
             data_format += '%s' % self.__format_integer(cur_width)
 
+        # array module doesn't have a function to heterogeneous bit widths,
+        # so fall back to the slower unpack approach
         tuple_tmp = iter_unpack(data_format, self.__read_bytes(offset, start, stop))
         tmp = [ti for t in tuple_tmp for ti in t]
         return tmp
@@ -287,10 +295,11 @@ class FlowData(object):
         data_type_size = calcsize(data_type)
         num_items, stop = self.__calc_data_item_count(start, stop, data_type_size)
 
-        tmp = unpack(
-            '%s%d%s' % (order, num_items, data_type),
-            self.__read_bytes(offset, start, stop)
-        )
+        self._fh.seek(offset + start)
+        tmp = array.array(data_type)
+        tmp.fromfile(self._fh, int(num_items))
+        if order == '>':
+            tmp.byteswap()
         return tmp
 
     @staticmethod
