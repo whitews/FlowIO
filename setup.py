@@ -5,7 +5,7 @@ with open('README.md', 'r') as fh:
 
 setup(
     name='FlowIO',
-    version='0.9.12b',
+    version='0.9.12',
     packages=['flowio'],
     package_data={'': []},
     description='FlowIO is a Python library for reading / writing Flow Cytometry Standard (FCS) files',
