@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setup(
     name='FlowIO',
-    version='0.9.11',
+    version='0.9.12b',
     packages=['flowio'],
     package_data={'': []},
     description='Flow Cytometry Standard I/O',
