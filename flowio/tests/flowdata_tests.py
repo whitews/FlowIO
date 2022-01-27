@@ -27,6 +27,12 @@ class FlowDataTestCase(unittest.TestCase):
     def test_get_text(self):
         self.assertEqual(self.flow_data.text['cyt'], 'FACScan')
 
+    def test_load_only_text(self):
+        flow_data = FlowData('examples/fcs_files/3FITC_4PE_004.fcs', only_text=True)
+
+        self.assertIsNone(flow_data.events)
+        self.assertRaises(AttributeError, flow_data.write_fcs, 'delete_this_file.fcs')
+
     @staticmethod
     def test_load_fcs_from_memory():
         with open('examples/fcs_files/3FITC_4PE_004.fcs', 'rb') as f:
