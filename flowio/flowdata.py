@@ -29,8 +29,10 @@ class FlowData(object):
 
     :param filename_or_handle: a path string or a file handle for an FCS file
     :param ignore_offset_error: option to ignore data offset error (see above note), default is False
+    :param only_text: option to only read the "text" segment of the FCS file without loading event data,
+        default is False
     """
-    def __init__(self, filename_or_handle, ignore_offset_error=False):
+    def __init__(self, filename_or_handle, ignore_offset_error=False, only_text=False):
         if isinstance(filename_or_handle, basestring):
             self._fh = open(str(filename_or_handle), 'rb')
         else:
@@ -86,12 +88,15 @@ class FlowData(object):
         if d_stop > self.file_size:
             raise EOFError("FCS header indicates data section greater than file size")
 
-        self.events = self.__parse_data(
-            self.cur_offset,
-            d_start,
-            d_stop,
-            self.text
-        )
+        if only_text:
+            self.events = None
+        else:
+            self.events = self.__parse_data(
+                self.cur_offset,
+                d_start,
+                d_stop,
+                self.text
+            )
 
         self.channels = self._parse_channels()
 
@@ -377,6 +382,12 @@ class FlowData(object):
         :param extra_non_standard: an optional dictionary for adding extra non-standard keywords/values
         :return: None
         """
+        if self.events is None:
+            raise AttributeError(
+                "FlowData instance does not contain event data. This might"
+                "occur if the FCS file was read with the only_text=True option."
+            )
+
         pnn_labels = [''] * len(self.channels)
         pns_labels = [''] * len(self.channels)
 
