@@ -6,7 +6,7 @@
 [![DOI](https://zenodo.org/badge/14634514.svg)](https://zenodo.org/badge/latestdoi/14634514)
 
 
-[![Build Status](https://travis-ci.com/whitews/FlowIO.svg?branch=master)](https://travis-ci.com/whitews/FlowIO)
+[![Build Status](https://app.travis-ci.com/whitews/FlowIO.svg?branch=master)](https://app.travis-ci.com/github/whitews/FlowIO)
 [![Coverage](https://codecov.io/gh/whitews/FlowIO/branch/master/graph/badge.svg)](https://codecov.io/gh/whitews/flowio)
 [![Documentation Status](https://readthedocs.org/projects/flowio/badge/?version=latest)](https://flowio.readthedocs.io/en/latest/?badge=latest)
 
