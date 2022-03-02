@@ -184,7 +184,7 @@ def create_fcs(
     # set to zeroes if data offsets are greater than header max data size.
     # (alternative: check and flag while creating text instead of checking here)
     byte_limit = 99999999
-    if int(text['BEGINDATA']) <= byte_limit and int(text['ENDDATA']) <= byte_limit:
+    if int(text['BEGINDATA']) <= byte_limit or int(text['ENDDATA']) <= byte_limit:
         file_handle.write('{0: >8}'.format(text['BEGINDATA']).encode())
         file_handle.write('{0: >8}'.format(text['ENDDATA']).encode())
     else:
