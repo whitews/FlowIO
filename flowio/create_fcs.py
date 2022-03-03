@@ -178,13 +178,15 @@ def create_fcs(
     file_handle.write('{0: >8}'.format(str(text_start)).encode())
 
     # Text end byte is one less than where our data starts
-    file_handle.write('{0: >8}'.format(str(final_start_data_offset - 1)).encode())
+    file_handle.write('{0: >8}'.format(str(final_begin_data_offset - 1)).encode())
 
-    # data start and end byte location.
-    # set to zeroes if data offsets are greater than header max data size.
-    # (alternative: check and flag while creating text instead of checking here)
+    # Header contains data start and end byte locations. However,
+    # the FCS 3.1 spec allows for only 8-byte ASCII encoded integers.
+    # So, each value is limited to 99,999,999. If data section extends
+    # past 99,999,999 bytes then both the data start & end values shall
+    # be set to zero.
     byte_limit = 99999999
-    if int(text['BEGINDATA']) <= byte_limit or int(text['ENDDATA']) <= byte_limit:
+    if int(text['ENDDATA']) <= byte_limit:
         file_handle.write('{0: >8}'.format(text['BEGINDATA']).encode())
         file_handle.write('{0: >8}'.format(text['ENDDATA']).encode())
     else:
