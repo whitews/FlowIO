@@ -180,13 +180,16 @@ def create_fcs(
     # Text end byte is one less than where our data starts
     file_handle.write('{0: >8}'.format(str(final_start_data_offset - 1)).encode())
 
-    # TODO: set zeroes if data offsets are greater than header max data size
-
-    # data start byte location
-    file_handle.write('{0: >8}'.format(text['BEGINDATA']).encode())
-
-    # data end byte location
-    file_handle.write('{0: >8}'.format(text['ENDDATA']).encode())
+    # data start and end byte location.
+    # set to zeroes if data offsets are greater than header max data size.
+    # (alternative: check and flag while creating text instead of checking here)
+    byte_limit = 99999999
+    if int(text['BEGINDATA']) <= byte_limit or int(text['ENDDATA']) <= byte_limit:
+        file_handle.write('{0: >8}'.format(text['BEGINDATA']).encode())
+        file_handle.write('{0: >8}'.format(text['ENDDATA']).encode())
+    else:
+        file_handle.write('{0: >8}'.format('0').encode())
+        file_handle.write('{0: >8}'.format('0').encode())
 
     # We don't support analysis sections so write space padded 8 byte '0'
     file_handle.write('{0: >8}'.format('0').encode())
