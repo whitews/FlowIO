@@ -88,7 +88,14 @@ def create_fcs(
             raise ValueError(
                 "Number of PnN labels does not match the number of PnS channels"
             )
+
     n_points = len(event_data)
+
+    if n_points == 0:
+        raise ValueError(
+            "'event_data' array provided was empty"
+        )
+
     if not n_points % n_channels == 0:
         raise ValueError(
             "Number of data points is not a multiple of the number of channels"
@@ -143,7 +150,8 @@ def create_fcs(
     # Calculate initial text size, but it's tricky b/c the text contains the
     # byte offset location for the data, which depends on the size of the
     # text section. We set placeholder empty string values for BEGINDATA &
-    # ENDDATA. Our data begins at the:
+    # ENDDATA. We know both of these will not be zero-length strings in the
+    # end. Our data begins at the:
     #  initial location + (string length of the initial location plus 2)
     text_string = build_text(
         text,
@@ -151,12 +159,46 @@ def create_fcs(
         extra_dict=extra,
         extra_dict_non_standard=extra_non_standard
     )
-    initial_offset = text_start + len(text_string)
-    final_start_data_offset = initial_offset + len(str(initial_offset + 2))
-    # and tack on the ENDDATA string length
-    final_start_data_offset += len(str(final_start_data_offset + data_size))
-    text['BEGINDATA'] = str(final_start_data_offset)
-    text['ENDDATA'] = str(final_start_data_offset + data_size - 1)
+    # initial offset is the minimum offset the data can start IF the
+    # BEGINDATA & ENDDATA text values were allowed to be empty strings
+    # NOTE: end data value is the location of the last data byte (so minus 1)
+    initial_begin_data_offset = text_start + len(text_string)
+    initial_end_data_offset = initial_begin_data_offset + data_size - 1
+
+    # data start offset location must account for the string lengths
+    # of BOTH the BEGINDATA & ENDDATA text values.
+    # get initial BEGINDATA string length
+    begin_data_value_length = len(str(initial_begin_data_offset))
+    # get initial ENDDATA string length
+    end_data_value_length = len(str(initial_end_data_offset))
+
+    # now determine how close either of these are to adding a new digit
+    begin_data_mod = 10**begin_data_value_length % initial_begin_data_offset
+    end_data_mod = 10**end_data_value_length % initial_end_data_offset
+
+    # since neither our initial offsets include the value lengths,
+    # if a mod value <= the sum of the value lengths AND not zero,
+    # then the BEGINDATA offset needs to be incremented by 1.
+    # If both mod values are <= sum of value lengths, then the
+    # BEGINDATA offset needs to be incremented by 2.
+    #
+    # Note if a mod value is 0 then the offset just ticked over
+    # to a new digit length (e.g. 1000) and is in no danger of
+    # increasing another digit
+    total_data_values_length = begin_data_value_length + end_data_value_length
+    begin_data_offset_correction = 0
+    if begin_data_mod <= total_data_values_length and begin_data_mod != 0:
+        begin_data_offset_correction += 1
+    if end_data_mod <= total_data_values_length and end_data_mod != 0:
+        begin_data_offset_correction += 1
+
+    final_begin_data_offset = initial_begin_data_offset + \
+        begin_data_value_length + \
+        end_data_value_length + \
+        begin_data_offset_correction
+
+    text['BEGINDATA'] = str(final_begin_data_offset)
+    text['ENDDATA'] = str(final_begin_data_offset + data_size - 1)
 
     # re-build text section and sanity check the data start location
     text_string = build_text(
@@ -165,8 +207,9 @@ def create_fcs(
         extra_dict=extra,
         extra_dict_non_standard=extra_non_standard
     )
+    # verify the final BEGINDATA value == text start position + length of the text string
     if text_start + len(text_string) != int(text['BEGINDATA']):
-        raise Exception("something went wrong calculating the offsets")
+        raise Exception("REPORT BUG: error calculating text offset")
 
     #
     # Start writing to file, beginning with header
