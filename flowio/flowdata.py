@@ -37,7 +37,8 @@ class FlowData(object):
             self._fh = open(str(filename_or_handle), 'rb')
         else:
             self._fh = filename_or_handle
-        self.cur_offset = 0
+
+        current_offset = 0
 
         self._ignore_offset = ignore_offset_error
 
@@ -49,14 +50,14 @@ class FlowData(object):
         # Get actual file size for sanity check of data section
         self._fh.seek(0, os.SEEK_END)
         self.file_size = self._fh.tell()
-        self._fh.seek(self.cur_offset)  # reset to beginning before parsing
+        self._fh.seek(current_offset)  # reset to beginning before parsing
 
         # parse headers
-        self.header = self.__parse_header(self.cur_offset)
+        self.header = self.__parse_header(current_offset)
 
         # parse text
         self.text = self.__parse_text(
-            self.cur_offset,
+            current_offset,
             self.header['text_start'],
             self.header['text_stop'])
 
@@ -73,7 +74,7 @@ class FlowData(object):
         except KeyError:
             a_stop = self.header['analysis_end']
 
-        self.analysis = self.__parse_analysis(self.cur_offset, a_start, a_stop)
+        self.analysis = self.__parse_analysis(current_offset, a_start, a_stop)
 
         # parse data
         try:
@@ -92,7 +93,7 @@ class FlowData(object):
             self.events = None
         else:
             self.events = self.__parse_data(
-                self.cur_offset,
+                current_offset,
                 d_start,
                 d_stop,
                 self.text
