@@ -3,8 +3,8 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-FlowUtils Documentation
-=======================
+FlowIO Documentation
+====================
 
 .. image:: https://img.shields.io/pypi/v/flowio.svg?colorB=dodgerblue
     :target: https://pypi.org/project/flowio/
