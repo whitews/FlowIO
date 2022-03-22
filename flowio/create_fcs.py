@@ -63,6 +63,7 @@ def build_text(
                 # save it for later, we'll put all the non-standard
                 # keys at the end
                 non_std_dict[new_key] = value
+                continue
 
             # TODO: check for Pn(B, E, R, N, S, G)
             #    and for PnG values, they should all be 1 b/c we only
