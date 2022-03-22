@@ -374,13 +374,17 @@ class FlowData(object):
 
         return channels
 
-    def write_fcs(self, filename, extra=None, extra_non_standard=None):
+    def write_fcs(self, filename, metadata=None):
         """
-        Export FlowData instance as a new FCS file
+        Export FlowData instance as a new FCS file.
+
+        By default, the output FCS file will include the $cyt, $date, and $spill
+        keywords (and values) from the FlowData instance. To exclude these keys,
+        specify a custom `metadata` dictionary (including an empty dictionary for
+        the bare minimum metadata).
 
         :param filename: name of exported FCS file
-        :param extra: an optional dictionary for adding extra standard keywords/values
-        :param extra_non_standard: an optional dictionary for adding extra non-standard keywords/values
+        :param metadata: an optional dictionary for adding metadata keywords/values
         :return: None
         """
         if self.events is None:
@@ -388,6 +392,21 @@ class FlowData(object):
                 "FlowData instance does not contain event data. This might"
                 "occur if the FCS file was read with the only_text=True option."
             )
+
+        if metadata is None:
+            metadata = {}
+
+            # by default, we'll add the $cyt, $date, & $spillover (or $spill) metadata
+            if 'spillover' in self.text:
+                metadata['spillover'] = self.text['spillover']
+            elif 'spill' in self.text:
+                metadata['spillover'] = self.text['spill']
+
+            if 'date' in self.text:
+                metadata['date'] = self.text['date']
+
+            if 'cyt' in self.text:
+                metadata['cyt'] = self.text['cyt']
 
         pnn_labels = [''] * len(self.channels)
         pns_labels = [''] * len(self.channels)
@@ -398,31 +417,12 @@ class FlowData(object):
             if 'PnS' in self.channels[k]:
                 pns_labels[int(k) - 1] = self.channels[k]['PnS']
 
-        if 'spill' in self.text:
-            spill = self.text['spill']
-        else:
-            spill = None
-
-        if 'date' in self.text:
-            acq_date = self.text['date']
-        else:
-            acq_date = None
-
-        if 'cyt' in self.text:
-            cytometer = self.text['cyt']
-        else:
-            cytometer = None
-
         fh = open(filename, 'wb')
         fh = create_fcs(
+            fh,
             self.events,
             pnn_labels,
-            fh,
-            spill=spill,
-            cyt=cytometer,
-            date=acq_date,
-            extra=extra,
-            extra_non_standard=extra_non_standard,
-            opt_channel_names=pns_labels
+            opt_channel_names=pns_labels,
+            metadata_dict=metadata
         )
         fh.close()
