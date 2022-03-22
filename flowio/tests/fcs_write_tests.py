@@ -240,3 +240,75 @@ class CreateFCSTestCase(unittest.TestCase):
 
         self.assertEqual(last_key_actual, last_key_truth)
         self.assertEqual(custom_tag_value, custom_tag_truth)
+
+    def test_create_fcs_with_png(self):
+        event_data = self.flow_data.events
+        channel_names = self.flow_data.channels
+        pnn_labels = [v['PnN'] for k, v in channel_names.items()]
+
+        metadata_dict = {
+            'p9g': '2',
+            'p11g': '2'
+        }
+
+        export_file_path = "examples/fcs_files/test_fcs_export.fcs"
+        fh = open(export_file_path, 'wb')
+
+        self.assertRaises(
+            ValueError,
+            create_fcs,
+            fh,
+            event_data,
+            channel_names=pnn_labels,
+            metadata_dict=metadata_dict
+        )
+
+        fh.close()
+        os.unlink(export_file_path)
+
+    def test_create_fcs_with_log_pne(self):
+        event_data = self.flow_data.events
+        channel_names = self.flow_data.channels
+        pnn_labels = [v['PnN'] for k, v in channel_names.items()]
+
+        metadata_dict = {
+            'p9e': '4,1'
+        }
+
+        export_file_path = "examples/fcs_files/test_fcs_export.fcs"
+        fh = open(export_file_path, 'wb')
+
+        self.assertRaises(
+            ValueError,
+            create_fcs,
+            fh,
+            event_data,
+            channel_names=pnn_labels,
+            metadata_dict=metadata_dict
+        )
+
+        fh.close()
+        os.unlink(export_file_path)
+
+    def test_create_fcs_ignore_extra_pnn(self):
+        event_data = self.flow_data.events
+        channel_names = self.flow_data.channels
+        pnn_labels = [v['PnN'] for k, v in channel_names.items()]
+
+        # this p9n value should get ignored
+        metadata_dict = {
+            'p9n': 'FLR1-A'
+        }
+
+        export_file_path = "examples/fcs_files/test_fcs_export.fcs"
+        fh = open(export_file_path, 'wb')
+        create_fcs(fh, event_data, channel_names=pnn_labels, metadata_dict=metadata_dict)
+        fh.close()
+
+        exported_flow_data = FlowData(export_file_path)
+        os.unlink(export_file_path)
+
+        p9n_tag_truth = 'V655-A'
+        p9n_tag_value = exported_flow_data.text['p9n']
+
+        self.assertEqual(p9n_tag_value, p9n_tag_truth)
