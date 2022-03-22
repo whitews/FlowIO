@@ -16,7 +16,7 @@ FlowIO Documentation
     :target: https://pypi.org/project/flowio/
 
 FlowIO is a Python library for reading / writing Flow Cytometry Standard (FCS)
-files and has zero external dependencies. FlowIO is compatible with Python 3 (FlowIO v0.9.9 was the last release supporting Python 2).
+files and has zero external dependencies. FlowIO is compatible with Python 3.6+ (FlowIO v0.9.9 was the last release supporting Python 2).
 
 For higher level interaction with flow cytometry data, including GatingML and FlowJo 10 support,
 see the related [FlowKit](https://github.com/whitews/FlowKit) project.
