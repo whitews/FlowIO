@@ -5,16 +5,102 @@ from .fcs_keywords import FCS_STANDARD_REQUIRED_KEYWORDS, \
     FCS_STANDARD_OPTIONAL_KEYWORDS
 
 
+def build_text(
+        required_dict,
+        text_delimiter,
+        metadata_dict=None
+):
+    result = text_delimiter
+
+    # used to store non-standard FCS keywords, which will be tacked on
+    # at the end
+    non_std_dict = {}
+
+    # Iterate through all the key/value pairs, checking for the presence
+    # of the delimiter in any value. If present, double the delimiter per
+    # the FCS specification, as values are not allowed to be zero-length,
+    # this is how the delimiter can be included in a keyword value.
+    #
+    # Only FCS standard keywords can (and must) begin with a '$' character.
+    # We will also check for the presence of this first character. Note,
+    # the FlowIO list of keywords does NOT include this character, it is
+    # added in this routine. Therefore, the provided metadata dictionary
+    # keys should never begin with a '$' character, FlowIO will handle
+    # this for the user.
+
+    # Required keys go first
+    for key in required_dict.keys():
+        result += '$%s%s%s%s' % (
+            key,
+            text_delimiter,
+            required_dict[key].replace(text_delimiter, text_delimiter * 2),
+            text_delimiter
+        )
+
+    # Next, iterate over all given metadata.
+    # Standard required keys will be ignored.
+    # Standard optional keys will be processed and added.
+    # Non-standard keys will be saved and added later.
+    if metadata_dict is not None:
+        # These cannot contain any of the required standard keywords.
+        # Also, they are case-insensitive.
+        # Check if any
+        for key, value in metadata_dict.items():
+            # check if value starts with a '$' and remove any leading '$' characters
+            match = re.match(r'^\$*(.*)', key)
+            new_key = match.groups()[0]
+
+            # convert to lowercase for comparison against standard required keywords
+            new_key = new_key.lower()
+
+            # check if the keyword is a standard required keyword
+            if new_key in FCS_STANDARD_REQUIRED_KEYWORDS:
+                # skip it, these are allowed to be set by the user
+                continue
+
+            # check if the key is an FCS standard optional keyword
+            if new_key not in FCS_STANDARD_OPTIONAL_KEYWORDS:
+                # save it for later, we'll put all the non-standard
+                # keys at the end
+                non_std_dict[new_key] = value
+
+            # TODO: check for Pn(B, E, R, N, S, G)
+            #    and for PnG values, they should all be 1 b/c we only
+            #    allow linear values, i.e. PnE of (0,0). We should
+            #    warn or error on presence of any non-linear values.
+
+            # Note we add the '$' character here for FCS standard keywords
+            # We also check for the presence of the delimiter in the value.
+            # If the delimiter is found, we double it per the FCS standard.
+            result += '$%s%s%s%s' % (
+                new_key.upper(),  # convert to uppercase for consistency
+                text_delimiter,
+                value.replace(text_delimiter, text_delimiter * 2),
+                text_delimiter
+            )
+
+        # Now process any non-standard metadata
+        for key, value in non_std_dict.items():
+            # these have already been checked, so just write them out
+            result += '%s%s%s%s' % (
+                key,
+                text_delimiter,
+                value.replace(
+                    text_delimiter, text_delimiter * 2
+                ),
+                text_delimiter
+            )
+
+    return result
+
+
 def create_fcs(
+        file_handle,
         event_data,
         channel_names,
-        file_handle,
-        spill=None,
-        cyt=None,
-        date=None,
-        extra=None,
-        extra_non_standard=None,
-        opt_channel_names=None):
+        opt_channel_names=None,
+        metadata_dict=None
+        ):
     """
     Create a new FCS file from a list of event data.
 
@@ -24,106 +110,14 @@ def create_fcs(
         which should match the given channel_names argument. All values in the
         spill text string should be comma delimited with no newline characters.
 
+    :param file_handle: file handle for new FCS file
     :param event_data: list of event data (flattened 1-D list)
     :param channel_names: list of channel labels to use for PnN fields
-    :param file_handle: file handle for new FCS file
-    :param spill: optional text for spillover matrix conforming to FCS 3.1 specification
-    :param cyt: optional text string to use for the $CYT field
-    :param date: optional text string to use for the $DATE field
-    :param extra: an optional dictionary for adding extra standard keywords/values
-    :param extra_non_standard: an optional dictionary for adding extra non-standard keywords/values
     :param opt_channel_names: optional list of channel labels to use for PnS fields
+    :param metadata_dict: an optional dictionary for adding extra metadata keywords/values
 
     :return:
     """
-    def build_text(
-            required_dict,
-            text_delimiter,
-            metadata_dict=None
-    ):
-        result = text_delimiter
-
-        # used to store non-standard FCS keywords, which will be tacked on
-        # at the end
-        non_std_dict = {}
-
-        # Iterate through all the key/value pairs, checking for the presence
-        # of the delimiter in any value. If present, double the delimiter per
-        # the FCS specification, as values are not allowed to be zero-length,
-        # this is how the delimiter can be included in a keyword value.
-        #
-        # Only FCS standard keywords can (and must) begin with a '$' character.
-        # We will also check for the presence of this first character. Note,
-        # the FlowIO list of keywords does NOT include this character, it is
-        # added in this routine. Therefore, the provided metadata dictionary
-        # keys should never begin with a '$' character, FlowIO will handle
-        # this for the user.
-
-        # Required keys go first
-        for key in required_dict.keys():
-            result += '$%s%s%s%s' % (
-                key,
-                text_delimiter,
-                required_dict[key].replace(text_delimiter, text_delimiter * 2),
-                text_delimiter
-            )
-
-        # Next, iterate over all given metadata.
-        # Standard required keys will be ignored.
-        # Standard optional keys will be processed and added.
-        # Non-standard keys will be saved and added later.
-        if metadata_dict is not None:
-            # These cannot contain any of the required standard keywords.
-            # Also, they are case-insensitive.
-            # Check if any
-            for key, value in metadata_dict.items():
-                # check if value starts with a '$' and remove any leading '$' characters
-                match = re.match(r'^\$*(.*)', key)
-                new_key = match.groups()[0]
-
-                # convert to lowercase for comparison against standard required keywords
-                new_key = new_key.lower()
-
-                # check if the keyword is a standard required keyword
-                if new_key in FCS_STANDARD_REQUIRED_KEYWORDS:
-                    # skip it, these are allowed to be set by the user
-                    continue
-
-                # check if the key is an FCS standard optional keyword
-                if new_key not in FCS_STANDARD_OPTIONAL_KEYWORDS:
-                    # save it for later, we'll put all the non-standard
-                    # keys at the end
-                    non_std_dict[new_key] = value
-
-                # TODO: check for Pn(B, E, R, N, S, G)
-                #    and for PnG values, they should all be 1 b/c we only
-                #    allow linear values, i.e. PnE of (0,0). We should
-                #    warn or error on presence of any non-linear values.
-
-                # Note we add the '$' character here for FCS standard keywords
-                # We also check for the presence of the delimiter in the value.
-                # If the delimiter is found, we double it per the FCS standard.
-                result += '$%s%s%s%s' % (
-                    new_key.upper(),  # convert to uppercase for consistency
-                    text_delimiter,
-                    value.replace(text_delimiter, text_delimiter * 2),
-                    text_delimiter
-                )
-
-            # Now process any non-standard metadata
-            for key, value in non_std_dict.items():
-                # these have already been checked, so just write them out
-                result += '%s%s%s%s' % (
-                    key,
-                    text_delimiter,
-                    value.replace(
-                        text_delimiter, text_delimiter * 2
-                    ),
-                    text_delimiter
-                )
-
-        return result
-
     text_start = 256  # arbitrarily start at byte 256.
     delimiter = '/'  # use / as our delimiter.
 
@@ -168,15 +162,6 @@ def create_fcs(
     text['PAR'] = str(n_channels)
     text['TOT'] = str(int(n_points / n_channels))
 
-    if spill is not None:
-        text['SPILLOVER'] = spill
-
-    if cyt is not None:
-        text['CYT'] = cyt
-
-    if date is not None:
-        text['DATE'] = date
-
     # calculate the max value, which we'll use for the $PnR field for all
     # channels. We'll use a magic number of 262144 if the true max value is
     # below that value, or the actual max value if above. 262144 (2^18) is
@@ -201,14 +186,6 @@ def create_fcs(
             if opt_channel_names[i] not in [None, '']:
                 text['P%dS' % (i + 1)] = opt_channel_names[i]
 
-    # combine metadata dicts
-    combined_metadata_dict = {}
-    if isinstance(extra, dict):
-        combined_metadata_dict = extra.copy()
-
-    if isinstance(extra_non_standard, dict):
-        combined_metadata_dict.update(extra_non_standard)
-
     # Calculate initial text size, but it's tricky b/c the text contains the
     # byte offset location for the data, which depends on the size of the
     # text section. We set placeholder empty string values for BEGINDATA &
@@ -218,7 +195,7 @@ def create_fcs(
     text_string = build_text(
         text,
         delimiter,
-        metadata_dict=combined_metadata_dict
+        metadata_dict=metadata_dict
     )
     # initial offset is the minimum offset the data can start IF the
     # BEGINDATA & ENDDATA text values were allowed to be empty strings
@@ -265,7 +242,7 @@ def create_fcs(
     text_string = build_text(
         text,
         delimiter,
-        metadata_dict=combined_metadata_dict
+        metadata_dict=metadata_dict
     )
     # verify the final BEGINDATA value == text start position + length of the text string
     if text_start + len(text_string) != int(text['BEGINDATA']):
