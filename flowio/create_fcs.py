@@ -58,17 +58,35 @@ def build_text(
                 # skip it, these are allowed to be set by the user
                 continue
 
+            # Check for channel parameter keywords like:
+            #   Pn(B, E, R, N, S, G)
+            # Also check values for any PnG values present. Any PnG
+            # values should all be 1 b/c we only allow linear values,
+            # i.e. PnE of (0,0).
+            pnx_match = re.match(r'^(p)(\d+)([berngs])$', new_key)
+            if pnx_match is not None:
+                _, chan, p_type = pnx_match.groups()
+                if p_type == 'g':
+                    gain_value = float(value)
+                    if gain_value > 1:
+                        # raise error since gain values aren't yet supported
+                        raise ValueError("Channel %s specified a gain value > 1 which is unsupported." % chan)
+
+                if p_type == 'e':
+                    if value != '0,0':
+                        # raise error since exporting with log scale isn't supported
+                        raise ValueError("Channel %s specified a log scale value which is unsupported." % chan)
+
+                # regardless of the channel parameter type, we'll skip it.
+                # All parameter metadata is handled separately
+                continue
+
             # check if the key is an FCS standard optional keyword
             if new_key not in FCS_STANDARD_OPTIONAL_KEYWORDS:
                 # save it for later, we'll put all the non-standard
                 # keys at the end
                 non_std_dict[new_key] = value
                 continue
-
-            # TODO: check for Pn(B, E, R, N, S, G)
-            #    and for PnG values, they should all be 1 b/c we only
-            #    allow linear values, i.e. PnE of (0,0). We should
-            #    warn or error on presence of any non-linear values.
 
             # Note we add the '$' character here for FCS standard keywords
             # We also check for the presence of the delimiter in the value.
@@ -178,9 +196,6 @@ def create_fcs(
         text['P%dE' % (i + 1)] = '0,0'
         text['P%dR' % (i + 1)] = pnr_value
         text['P%dN' % (i + 1)] = channel_names[i]
-
-        # TODO: check for gain (PnG) keywords and remove them, only gain 1.0 is supported
-        #    and issue warning if values other than 1.0 are found.
 
         if opt_channel_names is not None:
             # cannot have zero-length values in FCS keyword values
