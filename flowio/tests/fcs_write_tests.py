@@ -15,7 +15,7 @@ class CreateFCSTestCase(unittest.TestCase):
 
         export_file_path = "examples/fcs_files/test_fcs_export.fcs"
         fh = open(export_file_path, 'wb')
-        create_fcs(event_data, channel_names=pnn_labels, file_handle=fh)
+        create_fcs(fh, event_data, channel_names=pnn_labels)
         fh.close()
 
         exported_flow_data = FlowData(export_file_path)
@@ -90,7 +90,7 @@ class CreateFCSTestCase(unittest.TestCase):
 
         # File 01
         fh = open(export_file_path, 'wb')
-        create_fcs(event_data_01, channel_names=pnn_labels, file_handle=fh)
+        create_fcs(fh, event_data_01, channel_names=pnn_labels)
         fh.close()
 
         exported_flow_data_01 = FlowData(export_file_path)
@@ -98,7 +98,7 @@ class CreateFCSTestCase(unittest.TestCase):
 
         # File 02
         fh = open(export_file_path, 'wb')
-        create_fcs(event_data_02, channel_names=pnn_labels, file_handle=fh)
+        create_fcs(fh, event_data_02, channel_names=pnn_labels)
         fh.close()
 
         exported_flow_data_02 = FlowData(export_file_path)
@@ -106,8 +106,8 @@ class CreateFCSTestCase(unittest.TestCase):
 
         # File 03
         fh = open(export_file_path, 'wb')
-        extra_dict = {'COM': comment_value_01}
-        create_fcs(event_data_01, channel_names=pnn_labels, file_handle=fh, extra=extra_dict)
+        metadata_dict = {'COM': comment_value_01}
+        create_fcs(fh, event_data_01, channel_names=pnn_labels,  metadata_dict=metadata_dict)
         fh.close()
 
         exported_flow_data_03 = FlowData(export_file_path)
@@ -115,8 +115,8 @@ class CreateFCSTestCase(unittest.TestCase):
 
         # File 04
         fh = open(export_file_path, 'wb')
-        extra_dict = {'COM': comment_value_02}
-        create_fcs(event_data_01, channel_names=pnn_labels, file_handle=fh, extra=extra_dict)
+        metadata_dict = {'COM': comment_value_02}
+        create_fcs(fh, event_data_01, channel_names=pnn_labels, metadata_dict=metadata_dict)
         fh.close()
 
         exported_flow_data_04 = FlowData(export_file_path)
@@ -159,7 +159,7 @@ class CreateFCSTestCase(unittest.TestCase):
 
         export_file_path = "examples/fcs_files/test_large_fcs_export.fcs"
         fh = open(export_file_path, 'wb')
-        create_fcs(event_data, channel_names=pnn_labels, file_handle=fh)
+        create_fcs(fh, event_data, channel_names=pnn_labels)
         fh.close()
 
         exported_flow_data = FlowData(export_file_path)
