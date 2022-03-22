@@ -83,7 +83,7 @@ def build_text(
         for key, value in non_std_dict.items():
             # these have already been checked, so just write them out
             result += '%s%s%s%s' % (
-                key,
+                key.upper(),
                 text_delimiter,
                 value.replace(
                     text_delimiter, text_delimiter * 2
