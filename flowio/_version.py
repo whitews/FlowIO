@@ -1,4 +1,4 @@
 """
 FlowIO version
 """
-__version__ = "0.9.15b"
+__version__ = "1.0.0b"
