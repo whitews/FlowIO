@@ -1,10 +1,13 @@
 import unittest
+import warnings
 from flowio import FlowData
 
 
 class FlowDataLMDTestCase(unittest.TestCase):
     def setUp(self):
-        self.flow_data = FlowData('examples/fcs_files/coulter.lmd', ignore_offset_error=True)
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore')
+            self.flow_data = FlowData('examples/fcs_files/coulter.lmd', ignore_offset_error=True)
         
     def test_event_count(self):
         self.assertEqual(
