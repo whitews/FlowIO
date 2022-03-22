@@ -2,6 +2,7 @@ import unittest
 import os
 import numpy as np
 from flowio import FlowData, create_fcs
+from flowio.fcs_keywords import FCS_STANDARD_KEYWORDS
 
 
 class CreateFCSTestCase(unittest.TestCase):
@@ -169,3 +170,73 @@ class CreateFCSTestCase(unittest.TestCase):
         self.assertEqual(exported_flow_data.header['data_start'], 0)
         self.assertEqual(exported_flow_data.header['data_end'], 0)
         self.assertGreater(int(exported_flow_data.text['enddata']), 99999999)
+
+    def test_create_fcs_with_opt_channel_labels(self):
+        event_data = self.flow_data.events
+        channel_names = self.flow_data.channels
+        pnn_labels = [v['PnN'] for k, v in channel_names.items()]
+        pns_labels = [v['PnS'] for k, v in channel_names.items()]
+
+        export_file_path = "examples/fcs_files/test_fcs_export.fcs"
+        fh = open(export_file_path, 'wb')
+        create_fcs(fh, event_data, channel_names=pnn_labels, opt_channel_names=pns_labels)
+        fh.close()
+
+        exported_flow_data = FlowData(export_file_path)
+        os.unlink(export_file_path)
+
+        p5s_label_truth = 'CD3'
+        p5s_label_value = exported_flow_data.text['p5s']
+
+        self.assertEqual(p5s_label_value, p5s_label_truth)
+
+    def test_create_fcs_with_std_metadata(self):
+        event_data = self.flow_data.events
+        channel_names = self.flow_data.channels
+        pnn_labels = [v['PnN'] for k, v in channel_names.items()]
+
+        metadata_dict = {}
+
+        for k, v in self.flow_data.text.items():
+            if k in FCS_STANDARD_KEYWORDS:
+                metadata_dict[k] = v
+
+        export_file_path = "examples/fcs_files/test_fcs_export.fcs"
+        fh = open(export_file_path, 'wb')
+        create_fcs(fh, event_data, channel_names=pnn_labels, metadata_dict=metadata_dict)
+        fh.close()
+
+        exported_flow_data = FlowData(export_file_path)
+        os.unlink(export_file_path)
+
+        cyt_truth = 'Main Aria (FACSAria)'
+        cyt_value = exported_flow_data.text['cyt']
+
+        self.assertEqual(cyt_value, cyt_truth)
+
+    def test_create_fcs_with_non_std_metadata(self):
+        event_data = self.flow_data.events
+        channel_names = self.flow_data.channels
+        pnn_labels = [v['PnN'] for k, v in channel_names.items()]
+
+        metadata_dict = {
+            'custom_tag': 'added by flowio',
+            'cyt': 'Main Aria (FACSAria)'
+        }
+
+        export_file_path = "examples/fcs_files/test_fcs_export.fcs"
+        fh = open(export_file_path, 'wb')
+        create_fcs(fh, event_data, channel_names=pnn_labels, metadata_dict=metadata_dict)
+        fh.close()
+
+        exported_flow_data = FlowData(export_file_path)
+        os.unlink(export_file_path)
+
+        custom_tag_truth = 'added by flowio'
+        custom_tag_value = exported_flow_data.text['custom_tag']
+
+        last_key_truth = 'custom_tag'
+        last_key_actual = list(exported_flow_data.text.keys())[-1]
+
+        self.assertEqual(last_key_actual, last_key_truth)
+        self.assertEqual(custom_tag_value, custom_tag_truth)
