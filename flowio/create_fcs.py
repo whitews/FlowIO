@@ -1,5 +1,8 @@
+import re
 from array import array
 from collections import OrderedDict
+from .fcs_keywords import FCS_STANDARD_REQUIRED_KEYWORDS, \
+    FCS_STANDARD_OPTIONAL_KEYWORDS
 
 
 def create_fcs(
@@ -34,41 +37,86 @@ def create_fcs(
     :return:
     """
     def build_text(
-            text_dict,
+            required_dict,
             text_delimiter,
-            extra_dict=None,
-            extra_dict_non_standard=None
+            metadata_dict=None
     ):
         result = text_delimiter
 
-        # iterate through all the key/value pairs, checking for the presence
+        # used to store non-standard FCS keywords, which will be tacked on
+        # at the end
+        non_std_dict = {}
+
+        # Iterate through all the key/value pairs, checking for the presence
         # of the delimiter in any value. If present, double the delimiter per
         # the FCS specification, as values are not allowed to be zero-length,
         # this is how the delimiter can be included in a keyword value.
+        #
+        # Only FCS standard keywords can (and must) begin with a '$' character.
+        # We will also check for the presence of this first character. Note,
+        # the FlowIO list of keywords does NOT include this character, it is
+        # added in this routine. Therefore, the provided metadata dictionary
+        # keys should never begin with a '$' character, FlowIO will handle
+        # this for the user.
 
-        for key in text_dict.keys():
+        # Required keys go first
+        for key in required_dict.keys():
             result += '$%s%s%s%s' % (
                 key,
                 text_delimiter,
-                text_dict[key].replace(text_delimiter, text_delimiter * 2),
+                required_dict[key].replace(text_delimiter, text_delimiter * 2),
                 text_delimiter
             )
 
-        if extra_dict is not None:
-            for key in extra_dict.keys():
+        # Next, iterate over all given metadata.
+        # Standard required keys will be ignored.
+        # Standard optional keys will be processed and added.
+        # Non-standard keys will be saved and added later.
+        if metadata_dict is not None:
+            # These cannot contain any of the required standard keywords.
+            # Also, they are case-insensitive.
+            # Check if any
+            for key, value in metadata_dict.items():
+                # check if value starts with a '$' and remove any leading '$' characters
+                match = re.match(r'^\$*(.*)', key)
+                new_key = match.groups()[0]
+
+                # convert to lowercase for comparison against standard required keywords
+                new_key = new_key.lower()
+
+                # check if the keyword is a standard required keyword
+                if new_key in FCS_STANDARD_REQUIRED_KEYWORDS:
+                    # skip it, these are allowed to be set by the user
+                    continue
+
+                # check if the key is an FCS standard optional keyword
+                if new_key not in FCS_STANDARD_OPTIONAL_KEYWORDS:
+                    # save it for later, we'll put all the non-standard
+                    # keys at the end
+                    non_std_dict[new_key] = value
+
+                # TODO: check for Pn(B, E, R, N, S, G)
+                #    and for PnG values, they should all be 1 b/c we only
+                #    allow linear values, i.e. PnE of (0,0). We should
+                #    warn or error on presence of any non-linear values.
+
+                # Note we add the '$' character here for FCS standard keywords
+                # We also check for the presence of the delimiter in the value.
+                # If the delimiter is found, we double it per the FCS standard.
                 result += '$%s%s%s%s' % (
-                    key,
+                    new_key.upper(),  # convert to uppercase for consistency
                     text_delimiter,
-                    extra_dict[key].replace(text_delimiter, text_delimiter * 2),
+                    value.replace(text_delimiter, text_delimiter * 2),
                     text_delimiter
                 )
 
-        if extra_dict_non_standard is not None:
-            for key in extra_dict_non_standard.keys():
+            # Now process any non-standard metadata
+            for key, value in non_std_dict.items():
+                # these have already been checked, so just write them out
                 result += '%s%s%s%s' % (
                     key,
                     text_delimiter,
-                    extra_dict_non_standard[key].replace(
+                    value.replace(
                         text_delimiter, text_delimiter * 2
                     ),
                     text_delimiter
@@ -106,13 +154,16 @@ def create_fcs(
     text = OrderedDict()
     text['BEGINANALYSIS'] = '0'
     text['BEGINDATA'] = ''  # IMPORTANT: this gets replaced later
+    # noinspection SpellCheckingInspection
     text['BEGINSTEXT'] = '0'
     text['BYTEORD'] = '1,2,3,4'  # little endian
     text['DATATYPE'] = 'F'  # only do float data
     text['ENDANALYSIS'] = '0'
     text['ENDDATA'] = ''  # IMPORTANT: this gets replaced as well
+    # noinspection SpellCheckingInspection
     text['ENDSTEXT'] = '0'
     text['MODE'] = 'L'  # only do list mode data
+    # noinspection SpellCheckingInspection
     text['NEXTDATA'] = '0'
     text['PAR'] = str(n_channels)
     text['TOT'] = str(int(n_points / n_channels))
@@ -142,10 +193,21 @@ def create_fcs(
         text['P%dR' % (i + 1)] = pnr_value
         text['P%dN' % (i + 1)] = channel_names[i]
 
+        # TODO: check for gain (PnG) keywords and remove them, only gain 1.0 is supported
+        #    and issue warning if values other than 1.0 are found.
+
         if opt_channel_names is not None:
             # cannot have zero-length values in FCS keyword values
             if opt_channel_names[i] not in [None, '']:
                 text['P%dS' % (i + 1)] = opt_channel_names[i]
+
+    # combine metadata dicts
+    combined_metadata_dict = {}
+    if isinstance(extra, dict):
+        combined_metadata_dict = extra.copy()
+
+    if isinstance(extra_non_standard, dict):
+        combined_metadata_dict.update(extra_non_standard)
 
     # Calculate initial text size, but it's tricky b/c the text contains the
     # byte offset location for the data, which depends on the size of the
@@ -156,8 +218,7 @@ def create_fcs(
     text_string = build_text(
         text,
         delimiter,
-        extra_dict=extra,
-        extra_dict_non_standard=extra_non_standard
+        metadata_dict=combined_metadata_dict
     )
     # initial offset is the minimum offset the data can start IF the
     # BEGINDATA & ENDDATA text values were allowed to be empty strings
@@ -204,8 +265,7 @@ def create_fcs(
     text_string = build_text(
         text,
         delimiter,
-        extra_dict=extra,
-        extra_dict_non_standard=extra_non_standard
+        metadata_dict=combined_metadata_dict
     )
     # verify the final BEGINDATA value == text start position + length of the text string
     if text_start + len(text_string) != int(text['BEGINDATA']):
