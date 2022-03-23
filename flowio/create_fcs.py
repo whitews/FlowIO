@@ -63,19 +63,9 @@ def _build_text(
                 continue
 
             # Check for channel parameter keywords like:
-            #   Pn(B, E, R, N, S, G)
-            # Also check values for any PnG values present. Any PnG
-            # values should all be 1 b/c we only allow linear values,
-            # i.e. PnE of (0,0).
-            pnx_match = re.match(r'^(p)(\d+)([berngs])$', key)
+            #   Pn(B, E, G, R, N, S)
+            pnx_match = re.match(r'^(p)(\d+)([begrns])$', key)
             if pnx_match is not None:
-                _, chan, p_type = pnx_match.groups()
-
-                if p_type == 'e':
-                    if value != '0,0':
-                        # raise error since exporting with log scale isn't supported
-                        raise ValueError("Channel %s specified a log scale value which is unsupported." % chan)
-
                 # regardless of the channel parameter type, we'll skip it.
                 # All parameter metadata is handled separately
                 continue
@@ -194,39 +184,71 @@ def create_fcs(
 
             proc_metadata_dict[new_key] = v
 
-    # calculate the max value, which we'll use for the $PnR field for all
-    # channels. We'll use a magic number of 262144 if the true max value is
-    # below that value, or the actual max value if above. 262144 (2^18) is
-    # used by many cytometers and by FlowJo to determine the default display
-    # range for plotting.
-    if max(event_data) < 262144:
-        pnr_value = '262144'
-    else:
-        pnr_value = str(max(event_data))
-
     for i in range(n_channels):
         chan_num = i + 1  # channel numbers in FCS are indexed at 1
 
+        # Channel gain (PnG), lin/log (PnE), & range (PnR) are exceptions where we
+        # look in the provided metadata to find the values. We could do this later
+        # in the build_text function, but it's nicer if all the channel parameter
+        # keywords are in the same place in the file.
+
+        # PnE - lin/log
+        pne_key = 'p%de' % chan_num
+        if pne_key in proc_metadata_dict:
+            pne_value = proc_metadata_dict[pne_key]
+
+            # sanitize pne_value to remove any spaces
+            pne_value = re.sub(r'\s+', '', pne_value)
+        else:
+            pne_value = '0,0'
+
+        # PnG - gain
+        png_key = 'p%dg' % chan_num
+        if png_key in proc_metadata_dict:
+            png_value = proc_metadata_dict[png_key]
+        else:
+            png_value = '1.0'
+
+        # PnR - range
+        # Unless specified in the given metadata, We'll use a magic number
+        # of 262144 for the maximum range value. 262144 (2^18) is used by
+        # many cytometers and by FlowJo to determine the default display
+        # range for plotting. Per FCS 3.1, it is allowed that the maximum
+        # event value for a channel can exceed this value.
+        pnr_key = 'p%dr' % chan_num
+        if pnr_key in proc_metadata_dict:
+            pnr_value = proc_metadata_dict[pnr_key]
+        else:
+            pnr_value = '262144'
+
+        # Perform final check on gain / lin_log
+        # For PnE values indicating log scaling, only PnG == 1 is allowed
+        png_float = float(png_value)
+        (decades, log0) = [float(x) for x in pne_value.split(',')]
+        if decades != 0:
+            # we have a log channel, sanity check the log0 value
+            # log0 of 0 is invalid, i.e. there is no log(0)
+            # FCS 3.1 states to treat this case as log0 of 1
+            if log0 == 0:
+                pne_value = re.sub(r',.*$', ',1', pne_value)
+
+            # Finally, for log scaling, only PnG of 1 is allowed
+            if png_float != 1:
+                raise ValueError(
+                    "Log scaling is not allowed with gain != 1 (channel %d)" % chan_num
+                )
+
         text['P%dB' % chan_num] = '32'  # float requires 32 bits
-        text['P%dE' % chan_num] = '0,0'
+        text['P%dE' % chan_num] = pne_value
+        text['P%dG' % chan_num] = png_value
         text['P%dR' % chan_num] = pnr_value
         text['P%dN' % chan_num] = channel_names[i]
 
+        # PnS - optional channel label
         if opt_channel_names is not None:
             # cannot have zero-length values in FCS keyword values
             if opt_channel_names[i] not in [None, '']:
                 text['P%dS' % chan_num] = opt_channel_names[i]
-
-        # Channel gain is one exception where we look into the provided
-        # metadata to find the values. We could do this later in the
-        # build_text function, but it's nicer if all the channel parameter
-        # keywords are in the same place in the file.
-        png_key = 'p%dg' % chan_num
-        if png_key in proc_metadata_dict:
-            text['P%dG' % chan_num] = proc_metadata_dict[png_key]
-        else:
-            # pass
-            text['P%dG' % chan_num] = '1.0'
 
     # Calculate initial text size, but it's tricky b/c the text contains the
     # byte offset location for the data, which depends on the size of the
