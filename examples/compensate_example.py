@@ -2,7 +2,7 @@ import flowio
 import flowutils
 import numpy
 
-fd = flowio.FlowData('example.fcs')
+fd = flowio.FlowData('fcs_files/100715.fcs')
 spill, markers = flowutils.compensate.get_spill(fd.text['spill'])
 events = numpy.reshape(fd.events, (-1, fd.channel_count))
 

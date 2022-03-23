@@ -1,5 +1,7 @@
 import flowio
 import numpy
 
-f = flowio.FlowData('001_F6901PRY_21_C1_C01.fcs')
+f = flowio.FlowData('fcs_files/data1.fcs')
 n = numpy.reshape(f.events, (-1, f.channel_count))
+
+print(n.shape)
