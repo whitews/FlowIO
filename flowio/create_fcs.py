@@ -17,7 +17,7 @@ def _build_text(
     :param required_dict: dict of required FCS keywords
     :param text_delimiter: str character to use for the keyword delimiter
     :param metadata_dict: dict of other keywords to include (some will be ignored)
-    :return: str to use for the TEXT section of an FCS file
+    :return: UTF-8 encoded string to use for the TEXT section of an FCS file
     """
     result = text_delimiter
 
@@ -99,7 +99,8 @@ def _build_text(
                 text_delimiter
             )
 
-    return result
+    # return as UTF-8 in case there are any 2-byte characters
+    return result.encode('UTF-8')
 
 
 def create_fcs(
@@ -347,8 +348,8 @@ def create_fcs(
     spaces = ' ' * (text_start - file_handle.tell())
     file_handle.write(spaces.encode())
 
-    # Write out the entire text section
-    file_handle.write(text_string.encode())
+    # Write out the entire text section (already UTF-8 encoded)
+    file_handle.write(text_string)
 
     # And now our data!
     float_array = array('f', event_data)
