@@ -390,3 +390,21 @@ class CreateFCSTestCase(unittest.TestCase):
         p9n_tag_value = exported_flow_data.text['p9n']
 
         self.assertEqual(p9n_tag_value, p9n_tag_truth)
+
+    def test_create_fcs_with_2byte_char(self):
+        fcs_path = "examples/fcs_files/data1.fcs"
+        export_file_path = "examples/fcs_files/test_fcs_export.fcs"
+
+        flow_data = FlowData(fcs_path)
+        pnn_labels = [v['PnN'] for k, v in flow_data.channels.items()]
+
+        metadata = flow_data.text.copy()
+
+        fh = open(export_file_path, 'wb')
+        create_fcs(fh, flow_data.events, pnn_labels, metadata_dict=metadata)
+        fh.close()
+
+        exported_flow_data = FlowData(export_file_path)
+        os.unlink(export_file_path)
+
+        self.assertEqual(flow_data.events[0], exported_flow_data.events[0])
