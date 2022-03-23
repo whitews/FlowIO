@@ -5,11 +5,20 @@ from .fcs_keywords import FCS_STANDARD_REQUIRED_KEYWORDS, \
     FCS_STANDARD_OPTIONAL_KEYWORDS
 
 
-def build_text(
+def _build_text(
         required_dict,
         text_delimiter,
         metadata_dict=None
 ):
+    """
+    This function is for internal use only & builds the TEXT section of an FCS
+    file from the given metadata. The metadata_dict must have lowercase key values.
+
+    :param required_dict: dict of required FCS keywords
+    :param text_delimiter: str character to use for the keyword delimiter
+    :param metadata_dict: dict of other keywords to include (some will be ignored)
+    :return: str to use for the TEXT section of an FCS file
+    """
     result = text_delimiter
 
     # used to store non-standard FCS keywords, which will be tacked on
@@ -46,15 +55,10 @@ def build_text(
         # Also, they are case-insensitive.
         # Check if any
         for key, value in metadata_dict.items():
-            # check if value starts with a '$' and remove any leading '$' characters
-            match = re.match(r'^\$*(.*)', key)
-            new_key = match.groups()[0]
-
-            # convert to lowercase for comparison against standard required keywords
-            new_key = new_key.lower()
-
+            # The keys have already been pre-processed to be lowercase & have
+            # any leading "$" characters removed
             # check if the keyword is a standard required keyword
-            if new_key in FCS_STANDARD_REQUIRED_KEYWORDS:
+            if key in FCS_STANDARD_REQUIRED_KEYWORDS:
                 # skip it, these are allowed to be set by the user
                 continue
 
@@ -63,14 +67,9 @@ def build_text(
             # Also check values for any PnG values present. Any PnG
             # values should all be 1 b/c we only allow linear values,
             # i.e. PnE of (0,0).
-            pnx_match = re.match(r'^(p)(\d+)([berngs])$', new_key)
+            pnx_match = re.match(r'^(p)(\d+)([berngs])$', key)
             if pnx_match is not None:
                 _, chan, p_type = pnx_match.groups()
-                if p_type == 'g':
-                    gain_value = float(value)
-                    if gain_value > 1:
-                        # raise error since gain values aren't yet supported
-                        raise ValueError("Channel %s specified a gain value > 1 which is unsupported." % chan)
 
                 if p_type == 'e':
                     if value != '0,0':
@@ -82,17 +81,17 @@ def build_text(
                 continue
 
             # check if the key is an FCS standard optional keyword
-            if new_key not in FCS_STANDARD_OPTIONAL_KEYWORDS:
+            if key not in FCS_STANDARD_OPTIONAL_KEYWORDS:
                 # save it for later, we'll put all the non-standard
                 # keys at the end
-                non_std_dict[new_key] = value
+                non_std_dict[key] = value
                 continue
 
             # Note we add the '$' character here for FCS standard keywords
             # We also check for the presence of the delimiter in the value.
             # If the delimiter is found, we double it per the FCS standard.
             result += '$%s%s%s%s' % (
-                new_key.upper(),  # convert to uppercase for consistency
+                key.upper(),  # convert to uppercase for consistency
                 text_delimiter,
                 value.replace(text_delimiter, text_delimiter * 2),
                 text_delimiter
@@ -181,6 +180,20 @@ def create_fcs(
     text['PAR'] = str(n_channels)
     text['TOT'] = str(int(n_points / n_channels))
 
+    # Process the given metadata_dict to coerce the keys to lowercase.
+    # This makes it easier to find the gain values below & to process
+    # the other keys (don't have to worry about matching mixed case).
+    proc_metadata_dict = {}
+
+    if metadata_dict is not None:
+        for k, v in metadata_dict.items():
+            # check if keyword starts with a '$' and remove any leading '$' characters
+            match = re.match(r'^\$*(.*)', k)
+            new_key = match.groups()[0]
+            new_key = new_key.lower()
+
+            proc_metadata_dict[new_key] = v
+
     # calculate the max value, which we'll use for the $PnR field for all
     # channels. We'll use a magic number of 262144 if the true max value is
     # below that value, or the actual max value if above. 262144 (2^18) is
@@ -192,15 +205,28 @@ def create_fcs(
         pnr_value = str(max(event_data))
 
     for i in range(n_channels):
-        text['P%dB' % (i + 1)] = '32'  # float requires 32 bits
-        text['P%dE' % (i + 1)] = '0,0'
-        text['P%dR' % (i + 1)] = pnr_value
-        text['P%dN' % (i + 1)] = channel_names[i]
+        chan_num = i + 1  # channel numbers in FCS are indexed at 1
+
+        text['P%dB' % chan_num] = '32'  # float requires 32 bits
+        text['P%dE' % chan_num] = '0,0'
+        text['P%dR' % chan_num] = pnr_value
+        text['P%dN' % chan_num] = channel_names[i]
 
         if opt_channel_names is not None:
             # cannot have zero-length values in FCS keyword values
             if opt_channel_names[i] not in [None, '']:
-                text['P%dS' % (i + 1)] = opt_channel_names[i]
+                text['P%dS' % chan_num] = opt_channel_names[i]
+
+        # Channel gain is one exception where we look into the provided
+        # metadata to find the values. We could do this later in the
+        # build_text function, but it's nicer if all the channel parameter
+        # keywords are in the same place in the file.
+        png_key = 'p%dg' % chan_num
+        if png_key in proc_metadata_dict:
+            text['P%dG' % chan_num] = proc_metadata_dict[png_key]
+        else:
+            # pass
+            text['P%dG' % chan_num] = '1.0'
 
     # Calculate initial text size, but it's tricky b/c the text contains the
     # byte offset location for the data, which depends on the size of the
@@ -208,10 +234,10 @@ def create_fcs(
     # ENDDATA. We know both of these will not be zero-length strings in the
     # end. Our data begins at the:
     #  initial location + (string length of the initial location plus 2)
-    text_string = build_text(
+    text_string = _build_text(
         text,
         delimiter,
-        metadata_dict=metadata_dict
+        metadata_dict=proc_metadata_dict
     )
     # initial offset is the minimum offset the data can start IF the
     # BEGINDATA & ENDDATA text values were allowed to be empty strings
@@ -255,10 +281,10 @@ def create_fcs(
     text['ENDDATA'] = str(final_begin_data_offset + data_size - 1)
 
     # re-build text section and sanity check the data start location
-    text_string = build_text(
+    text_string = _build_text(
         text,
         delimiter,
-        metadata_dict=metadata_dict
+        metadata_dict=proc_metadata_dict
     )
     # verify the final BEGINDATA value == text start position + length of the text string
     if text_start + len(text_string) != int(text['BEGINDATA']):
