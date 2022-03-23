@@ -37,53 +37,54 @@ class CreateFCSTestCase(unittest.TestCase):
         Files 03 & 04 will have an extra metadata value for the keyword
         $COM (used for storing a comment) that will push the text section
         to a length that will make the data start byte location to be
-        just below and above 1000.
+        just below and above 1000. Both 03 & 04 use the data events from
+        file 01 (540 bytes)
 
         File 01:
-          4-bytes per float value * 138 event values = 552 bytes
+          4-bytes per float value * 135 event values = 540 bytes
           header = 256 bytes
-          text section = 192 bytes
-          data start should be: 256 + 192 = 448
-          data end should be: 448 + 552 - 1 = 999
+          text section = 201 bytes
+          data start should be: 256 + 201 = 457
+          data end should be: 457 + 540 - 1 = 996
 
         File 02:
-          4-bytes per float value * 139 event values = 556 bytes
+          4-bytes per float value * 136 event values = 544 bytes
           header = 256 bytes
-          text section (by default here) = 193 bytes
-          data start should be: 256 + 193 = 449
-          data end should be: 449 + 556 - 1 = 1004
+          text section (by default here) = 202 bytes
+          data start should be: 256 + 202 = 458
+          data end should be: 458 + 544 - 1 = 1001
 
         File 03:
-          4-bytes per float value * 138 event values = 552 bytes
+          4-bytes per float value * 135 event values = 540 bytes
           header = 256 bytes
-          extra text: 551
+          extra text: 542
             4   bytes for '$COM'
-            544 bytes ($COM value size)
+            535 bytes ($COM value size)
             2   bytes (extra delimiters)
             1   byte (extra digit for data end location)
-          text section  192 bytes (like File 01) + 551 (from above) = 743 bytes
+          text section  201 bytes (like File 01) + 542 (from above) = 743 bytes
           data start should be: 256 + 743 = 999
-          data end should be: 999 + 552 - 1 = 1550
+          data end should be: 999 + 540 - 1 = 1538
 
         File 04:
-          4-bytes per float value * 138 event values = 552 bytes
+          4-bytes per float value * 136 event values = 540 bytes
           header = 256 bytes
-          extra text: 553
+          extra text: 544
             4   bytes for '$COM'
-            545 bytes ($COM value size)
+            536 bytes ($COM value size)
             2   bytes (extra delimiters)
             2   byte (extra digit for both data begin & data end location)
-          text section  192 bytes (like File 01) + 553 (from above) = 745 bytes
+          text section  201 bytes (like File 01) + 544 (from above) = 745 bytes
           data start should be: 256 + 745 = 1001
-          data end should be: 1001 + 552 - 1 = 1552
+          data end should be: 1001 + 540 - 1 = 1540
         """
 
-        n_events_list = [138.0, 139.0]
+        n_events_list = [135.0, 136.0]
         event_data_01 = list(np.arange(n_events_list[0]))
         event_data_02 = list(np.arange(n_events_list[1]))
 
-        comment_value_01 = 'x' * 544
-        comment_value_02 = 'x' * 545
+        comment_value_01 = 'x' * 535
+        comment_value_02 = 'x' * 536
 
         pnn_labels = ['FSC-A']
 
@@ -125,23 +126,23 @@ class CreateFCSTestCase(unittest.TestCase):
 
         self.assertIsInstance(exported_flow_data_01, FlowData)
         self.assertListEqual(event_data_01, list(exported_flow_data_01.events))
-        self.assertEqual(exported_flow_data_01.header['data_start'], 448)
-        self.assertEqual(exported_flow_data_01.header['data_end'], 999)
+        self.assertEqual(exported_flow_data_01.header['data_start'], 457)
+        self.assertEqual(exported_flow_data_01.header['data_end'], 996)
 
         self.assertIsInstance(exported_flow_data_02, FlowData)
         self.assertListEqual(event_data_02, list(exported_flow_data_02.events))
-        self.assertEqual(exported_flow_data_02.header['data_start'], 449)
-        self.assertEqual(exported_flow_data_02.header['data_end'], 1004)
+        self.assertEqual(exported_flow_data_02.header['data_start'], 458)
+        self.assertEqual(exported_flow_data_02.header['data_end'], 1001)
 
         self.assertIsInstance(exported_flow_data_03, FlowData)
         self.assertListEqual(event_data_01, list(exported_flow_data_03.events))
         self.assertEqual(exported_flow_data_03.header['data_start'], 999)
-        self.assertEqual(exported_flow_data_03.header['data_end'], 1550)
+        self.assertEqual(exported_flow_data_03.header['data_end'], 1538)
 
         self.assertIsInstance(exported_flow_data_04, FlowData)
         self.assertListEqual(event_data_01, list(exported_flow_data_04.events))
         self.assertEqual(exported_flow_data_04.header['data_start'], 1001)
-        self.assertEqual(exported_flow_data_04.header['data_end'], 1552)
+        self.assertEqual(exported_flow_data_04.header['data_end'], 1540)
 
     def test_create_large_fcs(self):
         # create 100,000,000 bytes of event data
@@ -253,18 +254,13 @@ class CreateFCSTestCase(unittest.TestCase):
 
         export_file_path = "examples/fcs_files/test_fcs_export.fcs"
         fh = open(export_file_path, 'wb')
-
-        self.assertRaises(
-            ValueError,
-            create_fcs,
-            fh,
-            event_data,
-            channel_names=pnn_labels,
-            metadata_dict=metadata_dict
-        )
-
+        create_fcs(fh, event_data, channel_names=pnn_labels, metadata_dict=metadata_dict)
         fh.close()
+
+        exported_flow_data = FlowData(export_file_path)
         os.unlink(export_file_path)
+
+        self.assertEqual(exported_flow_data.text['p9g'], '2')
 
     def test_create_fcs_with_log_pne(self):
         event_data = self.flow_data.events
