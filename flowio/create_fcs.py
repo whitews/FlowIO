@@ -276,23 +276,23 @@ def create_fcs(
     end_data_value_length = len(str(initial_end_data_offset))
 
     # now determine how close either of these are to adding a new digit
-    begin_data_mod = 10**begin_data_value_length % initial_begin_data_offset
-    end_data_mod = 10**end_data_value_length % initial_end_data_offset
+    begin_data_diff = 10**begin_data_value_length - initial_begin_data_offset
+    end_data_diff = 10**end_data_value_length - initial_end_data_offset
 
     # since neither our initial offsets include the value lengths,
-    # if a mod value <= the sum of the value lengths AND not zero,
+    # if a diff value <= the sum of the value lengths AND not zero,
     # then the BEGINDATA offset needs to be incremented by 1.
-    # If both mod values are <= sum of value lengths, then the
+    # If both diff values are <= sum of value lengths, then the
     # BEGINDATA offset needs to be incremented by 2.
     #
-    # Note if a mod value is 0 then the offset just ticked over
+    # Note if a diff value is 0 then the offset just ticked over
     # to a new digit length (e.g. 1000) and is in no danger of
     # increasing another digit
     total_data_values_length = begin_data_value_length + end_data_value_length
     begin_data_offset_correction = 0
-    if begin_data_mod <= total_data_values_length and begin_data_mod != 0:
+    if begin_data_diff <= total_data_values_length and begin_data_diff != 0:
         begin_data_offset_correction += 1
-    if end_data_mod <= total_data_values_length and end_data_mod != 0:
+    if end_data_diff <= total_data_values_length and end_data_diff != 0:
         begin_data_offset_correction += 1
 
     final_begin_data_offset = initial_begin_data_offset + \
