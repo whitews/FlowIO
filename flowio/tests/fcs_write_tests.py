@@ -1,6 +1,7 @@
 import unittest
 import os
 import numpy as np
+import pytest
 from flowio import FlowData, create_fcs
 from flowio.fcs_keywords import FCS_STANDARD_KEYWORDS
 
@@ -262,7 +263,7 @@ class CreateFCSTestCase(unittest.TestCase):
 
         self.assertEqual(exported_flow_data.text['p9g'], '2')
 
-    def test_create_fcs_with_log_pne(self):
+    def test_create_fcs_with_log_pne_warns(self):
         event_data = self.flow_data.events
         channel_names = self.flow_data.channels
         pnn_labels = [v['PnN'] for k, v in channel_names.items()]
@@ -272,73 +273,10 @@ class CreateFCSTestCase(unittest.TestCase):
         }
 
         export_file_path = "examples/fcs_files/test_fcs_export.fcs"
-        fh = open(export_file_path, 'wb')
 
-        create_fcs(fh, event_data, channel_names=pnn_labels, metadata_dict=metadata_dict)
-
-        fh.close()
-
-        exported_flow_data = FlowData(export_file_path)
-        os.unlink(export_file_path)
-
-        self.assertEqual(exported_flow_data.text['p9e'], '4,1')
-
-    def test_create_fcs_with_log0_pne(self):
-        """
-        This tests using the invalid PnE log0 value of 0.
-        Unfortunately, this is commonly found in files, and
-        FCS 3.1 states to treat it as a 1. create_fcs will
-        do this automatically if given decades > 0 and
-        log0 == 0
-        """
-        event_data = self.flow_data.events
-        channel_names = self.flow_data.channels
-        pnn_labels = [v['PnN'] for k, v in channel_names.items()]
-
-        metadata_dict = {
-            'p9e': '4,0'
-        }
-
-        export_file_path = "examples/fcs_files/test_fcs_export.fcs"
-        fh = open(export_file_path, 'wb')
-
-        create_fcs(fh, event_data, channel_names=pnn_labels, metadata_dict=metadata_dict)
-
-        fh.close()
-
-        exported_flow_data = FlowData(export_file_path)
-        os.unlink(export_file_path)
-
-        self.assertEqual(exported_flow_data.text['p9e'], '4,1')
-
-    def test_create_fcs_with_invalid_gain_with_log_pne(self):
-        """
-        This tests using the invalid combination of a log
-        scaling PnE value & gain value != 1.
-        """
-        event_data = self.flow_data.events
-        channel_names = self.flow_data.channels
-        pnn_labels = [v['PnN'] for k, v in channel_names.items()]
-
-        metadata_dict = {
-            'p9e': '4,1',
-            'p9g': '2'
-        }
-
-        export_file_path = "examples/fcs_files/test_fcs_export.fcs"
-        fh = open(export_file_path, 'wb')
-
-        self.assertRaises(
-            ValueError,
-            create_fcs,
-            fh,
-            event_data,
-            channel_names=pnn_labels,
-            metadata_dict=metadata_dict
-        )
-
-        fh.close()
-        os.unlink(export_file_path)
+        with open(export_file_path, 'wb') as fh:
+            with pytest.warns():
+                create_fcs(fh, event_data, channel_names=pnn_labels, metadata_dict=metadata_dict)
 
     def test_create_fcs_with_pnr(self):
         """
