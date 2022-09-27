@@ -193,6 +193,26 @@ class CreateFCSTestCase(unittest.TestCase):
 
         self.assertEqual(p5s_label_value, p5s_label_truth)
 
+    def test_create_fcs_with_opt_channel_labels_none(self):
+        event_data = self.flow_data.events
+        channel_names = self.flow_data.channels
+        pnn_labels = [v['PnN'] for k, v in channel_names.items()]
+        pns_labels = [v['PnS'] for k, v in channel_names.items()]
+        pns_labels[0] = None
+        pns_labels[1] = float("nan")
+        pns_labels[2] = ""
+
+        export_file_path = "examples/fcs_files/test_fcs_export.fcs"
+        with open(export_file_path, 'wb') as fh:
+            create_fcs(fh, event_data, channel_names=pnn_labels, opt_channel_names=pns_labels)
+
+        exported_flow_data = FlowData(export_file_path)
+        os.unlink(export_file_path)
+
+        self.assertNotIn("p1s", exported_flow_data.text)
+        self.assertNotIn("p2s", exported_flow_data.text)
+        self.assertNotIn("p3s", exported_flow_data.text)
+
     def test_create_fcs_with_std_metadata(self):
         event_data = self.flow_data.events
         channel_names = self.flow_data.channels
