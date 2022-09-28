@@ -3,7 +3,13 @@ from array import array
 from collections import OrderedDict
 from .fcs_keywords import FCS_STANDARD_REQUIRED_KEYWORDS, \
     FCS_STANDARD_OPTIONAL_KEYWORDS
+import warnings
 
+class FlowIOWarning(Warning):
+    pass
+
+class PnEWarning(FlowIOWarning):
+    pass
 
 def _build_text(
         required_dict,
@@ -197,11 +203,10 @@ def create_fcs(
         pne_key = 'p%de' % chan_num
         if pne_key in proc_metadata_dict:
             pne_value = proc_metadata_dict[pne_key]
-
-            # sanitize pne_value to remove any spaces
-            pne_value = re.sub(r'\s+', '', pne_value)
-        else:
-            pne_value = '0,0'
+            # Allow '0,0', '0.0,0.0', etc.
+            (decades, log0) = [float(x) for x in pne_value.split(',')]
+            if decades != 0 or log0 != 0:
+                warnings.warn('$P%dE was set to %s but must be 0,0 for linear data' % (chan_num, pne_value), PnEWarning)
 
         # PnG - gain
         png_key = 'p%dg' % chan_num
@@ -222,25 +227,8 @@ def create_fcs(
         else:
             pnr_value = '262144'
 
-        # Perform final check on gain / lin_log
-        # For PnE values indicating log scaling, only PnG == 1 is allowed
-        png_float = float(png_value)
-        (decades, log0) = [float(x) for x in pne_value.split(',')]
-        if decades != 0:
-            # we have a log channel, sanity check the log0 value
-            # log0 of 0 is invalid, i.e. there is no log(0)
-            # FCS 3.1 states to treat this case as log0 of 1
-            if log0 == 0:
-                pne_value = re.sub(r',.*$', ',1', pne_value)
-
-            # Finally, for log scaling, only PnG of 1 is allowed
-            if png_float != 1:
-                raise ValueError(
-                    "Log scaling is not allowed with gain != 1 (channel %d)" % chan_num
-                )
-
         text['P%dB' % chan_num] = '32'  # float requires 32 bits
-        text['P%dE' % chan_num] = pne_value
+        text['P%dE' % chan_num] = '0,0'  # float requires 0,0
         text['P%dG' % chan_num] = png_value
         text['P%dR' % chan_num] = pnr_value
         text['P%dN' % chan_num] = channel_names[i]
