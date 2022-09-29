@@ -202,7 +202,10 @@ def create_fcs(
             # Allow '0,0', '0.0,0.0', etc.
             (decades, log0) = [float(x) for x in pne_value.split(',')]
             if decades != 0 or log0 != 0:
-                warnings.warn('$P%dE was set to %s but must be 0,0 for linear data' % (chan_num, pne_value), PnEWarning)
+                warnings.warn(
+                    'Invalid $P%dE (%s) specified for floating point data, setting to 0,0' % (chan_num, pne_value),
+                    PnEWarning
+                )
 
         # PnG - gain
         png_key = 'p%dg' % chan_num
