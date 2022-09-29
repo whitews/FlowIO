@@ -1,15 +1,11 @@
 import re
 from array import array
 from collections import OrderedDict
+from .exceptions import PnEWarning
 from .fcs_keywords import FCS_STANDARD_REQUIRED_KEYWORDS, \
     FCS_STANDARD_OPTIONAL_KEYWORDS
 import warnings
 
-class FlowIOWarning(Warning):
-    pass
-
-class PnEWarning(FlowIOWarning):
-    pass
 
 def _build_text(
         required_dict,
