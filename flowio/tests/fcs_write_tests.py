@@ -1,9 +1,9 @@
 import unittest
 import os
 import numpy as np
-import pytest
 from flowio import FlowData, create_fcs
 from flowio.fcs_keywords import FCS_STANDARD_KEYWORDS
+from flowio.exceptions import PnEWarning
 
 
 class CreateFCSTestCase(unittest.TestCase):
@@ -275,8 +275,14 @@ class CreateFCSTestCase(unittest.TestCase):
         export_file_path = "examples/fcs_files/test_fcs_export.fcs"
 
         with open(export_file_path, 'wb') as fh:
-            with pytest.warns():
-                create_fcs(fh, event_data, channel_names=pnn_labels, metadata_dict=metadata_dict)
+            self.assertWarns(
+                PnEWarning,
+                create_fcs,
+                fh,
+                event_data,
+                channel_names=pnn_labels,
+                metadata_dict=metadata_dict
+            )
 
     def test_create_fcs_with_pnr(self):
         """
