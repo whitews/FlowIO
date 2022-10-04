@@ -187,6 +187,15 @@ def create_fcs(
 
             proc_metadata_dict[new_key] = v
 
+    # Verify data type is float, it's the only type supported for now.
+    # Supporting int type is more complicated b/c it allows setting
+    # different bit allocations for event data per channel. Float is
+    # easy b/c all parameters must use 32 bits per event value.
+    if 'datatype' in proc_metadata_dict:
+        dtype_value = proc_metadata_dict['datatype']
+        if dtype_value != 'F':
+            raise NotImplementedError("Creating FCS files with data type %s is not supported." % dtype_value)
+
     for i in range(n_channels):
         chan_num = i + 1  # channel numbers in FCS are indexed at 1
 
