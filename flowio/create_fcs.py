@@ -1,8 +1,10 @@
 import re
 from array import array
 from collections import OrderedDict
+from .exceptions import PnEWarning
 from .fcs_keywords import FCS_STANDARD_REQUIRED_KEYWORDS, \
     FCS_STANDARD_OPTIONAL_KEYWORDS
+import warnings
 
 
 def _build_text(
@@ -185,6 +187,15 @@ def create_fcs(
 
             proc_metadata_dict[new_key] = v
 
+    # Verify data type is float, it's the only type supported for now.
+    # Supporting int type is more complicated b/c it allows setting
+    # different bit allocations for event data per channel. Float is
+    # easy b/c all parameters must use 32 bits per event value.
+    if 'datatype' in proc_metadata_dict:
+        dtype_value = proc_metadata_dict['datatype']
+        if dtype_value != 'F':
+            raise NotImplementedError("Creating FCS files with data type %s is not supported." % dtype_value)
+
     for i in range(n_channels):
         chan_num = i + 1  # channel numbers in FCS are indexed at 1
 
@@ -197,11 +208,13 @@ def create_fcs(
         pne_key = 'p%de' % chan_num
         if pne_key in proc_metadata_dict:
             pne_value = proc_metadata_dict[pne_key]
-
-            # sanitize pne_value to remove any spaces
-            pne_value = re.sub(r'\s+', '', pne_value)
-        else:
-            pne_value = '0,0'
+            # Allow '0,0', '0.0,0.0', etc.
+            (decades, log0) = [float(x) for x in pne_value.split(',')]
+            if decades != 0 or log0 != 0:
+                warnings.warn(
+                    'Invalid $P%dE (%s) specified for floating point data, setting to 0,0' % (chan_num, pne_value),
+                    PnEWarning
+                )
 
         # PnG - gain
         png_key = 'p%dg' % chan_num
@@ -222,25 +235,8 @@ def create_fcs(
         else:
             pnr_value = '262144'
 
-        # Perform final check on gain / lin_log
-        # For PnE values indicating log scaling, only PnG == 1 is allowed
-        png_float = float(png_value)
-        (decades, log0) = [float(x) for x in pne_value.split(',')]
-        if decades != 0:
-            # we have a log channel, sanity check the log0 value
-            # log0 of 0 is invalid, i.e. there is no log(0)
-            # FCS 3.1 states to treat this case as log0 of 1
-            if log0 == 0:
-                pne_value = re.sub(r',.*$', ',1', pne_value)
-
-            # Finally, for log scaling, only PnG of 1 is allowed
-            if png_float != 1:
-                raise ValueError(
-                    "Log scaling is not allowed with gain != 1 (channel %d)" % chan_num
-                )
-
         text['P%dB' % chan_num] = '32'  # float requires 32 bits
-        text['P%dE' % chan_num] = pne_value
+        text['P%dE' % chan_num] = '0,0'  # float requires 0,0
         text['P%dG' % chan_num] = png_value
         text['P%dR' % chan_num] = pnr_value
         text['P%dN' % chan_num] = channel_names[i]
