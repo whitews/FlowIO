@@ -39,9 +39,6 @@ def _build_text(
 
     # Required keys go first
     for key in required_dict.keys():
-        if key == "BEGINDATA" or key == "ENDDATA":
-            # These are added later because they depend on the text segment size
-            continue
         result += '$%s%s%s%s' % (
             key,
             text_delimiter,
@@ -159,11 +156,13 @@ def create_fcs(
     # Construct the primary text section using OrderedDict to preserve order
     text = OrderedDict()
     text['BEGINANALYSIS'] = '0'
+    text['BEGINDATA'] = ''  # IMPORTANT: this gets replaced later
     # noinspection SpellCheckingInspection
     text['BEGINSTEXT'] = '0'
     text['BYTEORD'] = '1,2,3,4'  # little endian
     text['DATATYPE'] = 'F'  # only do float data
     text['ENDANALYSIS'] = '0'
+    text['ENDDATA'] = ''  # IMPORTANT: this gets replaced as well
     # noinspection SpellCheckingInspection
     text['ENDSTEXT'] = '0'
     text['MODE'] = 'L'  # only do list mode data
@@ -252,28 +251,67 @@ def create_fcs(
             if opt_channel_names[i] not in [None, '']:
                 text['P%dS' % chan_num] = opt_channel_names[i]
 
-    # Calculate the text segment size. The text segment contains the byte offset
-    # locations for the data segment, which depend on the size of the text
-    # section. To break that loop, we pad $BEGINDATA and $ENDDATA with enough
-    # zeros to support up to ~1 TB files.
+    # Calculate initial text size, but it's tricky b/c the text contains the
+    # byte offset location for the data, which depends on the size of the
+    # text section. We set placeholder empty string values for BEGINDATA &
+    # ENDDATA. We know both of these will not be zero-length strings in the
+    # end. Our data begins at the:
+    #  initial location + (string length of the initial location plus 2)
     text_string = _build_text(
         text,
         delimiter,
         metadata_dict=proc_metadata_dict
     )
-    # $BEGINDATA/0123456789ab/$ENDDATA/0123456789ab/ = 46 bytes
-    size_of_header = len(text_string) + 46
-    begin_data_offset = text_start + size_of_header
-    end_data_offset = begin_data_offset + data_size - 1
+    # initial offset is the minimum offset the data can start IF the
+    # BEGINDATA & ENDDATA text values were allowed to be empty strings
+    # NOTE: end data value is the location of the last data byte (so minus 1)
+    initial_begin_data_offset = text_start + len(text_string)
+    initial_end_data_offset = initial_begin_data_offset + data_size - 1
 
-    text_string = ('%c$BEGINDATA%c%012u%c$ENDDATA%c%012u' % (
+    # data start offset location must account for the string lengths
+    # of BOTH the BEGINDATA & ENDDATA text values.
+    # get initial BEGINDATA string length
+    begin_data_value_length = len(str(initial_begin_data_offset))
+    # get initial ENDDATA string length
+    end_data_value_length = len(str(initial_end_data_offset))
+
+    # now determine how close either of these are to adding a new digit
+    begin_data_diff = 10**begin_data_value_length - initial_begin_data_offset
+    end_data_diff = 10**end_data_value_length - initial_end_data_offset
+
+    # since neither our initial offsets include the value lengths,
+    # if a diff value <= the sum of the value lengths AND not zero,
+    # then the BEGINDATA offset needs to be incremented by 1.
+    # If both diff values are <= sum of value lengths, then the
+    # BEGINDATA offset needs to be incremented by 2.
+    #
+    # Note if a diff value is 0 then the offset just ticked over
+    # to a new digit length (e.g. 1000) and is in no danger of
+    # increasing another digit
+    total_data_values_length = begin_data_value_length + end_data_value_length
+    begin_data_offset_correction = 0
+    if begin_data_diff <= total_data_values_length and begin_data_diff != 0:
+        begin_data_offset_correction += 1
+    if end_data_diff <= total_data_values_length and end_data_diff != 0:
+        begin_data_offset_correction += 1
+
+    final_begin_data_offset = initial_begin_data_offset + \
+        begin_data_value_length + \
+        end_data_value_length + \
+        begin_data_offset_correction
+
+    text['BEGINDATA'] = str(final_begin_data_offset)
+    text['ENDDATA'] = str(final_begin_data_offset + data_size - 1)
+
+    # re-build text section and sanity check the data start location
+    text_string = _build_text(
+        text,
         delimiter,
-        delimiter,
-        begin_data_offset,
-        delimiter,
-        delimiter,
-        end_data_offset
-    )).encode() + text_string
+        metadata_dict=proc_metadata_dict
+    )
+    # verify the final BEGINDATA value == text start position + length of the text string
+    if text_start + len(text_string) != int(text['BEGINDATA']):
+        raise Exception("REPORT BUG: error calculating text offset")
 
     #
     # Start writing to file, beginning with header
@@ -285,7 +323,7 @@ def create_fcs(
     file_handle.write('{0: >8}'.format(str(text_start)).encode())
 
     # Text end byte is one less than where our data starts
-    file_handle.write('{0: >8}'.format(str(begin_data_offset - 1)).encode())
+    file_handle.write('{0: >8}'.format(str(final_begin_data_offset - 1)).encode())
 
     # Header contains data start and end byte locations. However,
     # the FCS 3.1 spec allows for only 8-byte ASCII encoded integers.
@@ -293,9 +331,9 @@ def create_fcs(
     # past 99,999,999 bytes then both the data start & end values shall
     # be set to zero.
     byte_limit = 99999999
-    if int(end_data_offset) <= byte_limit:
-        file_handle.write('{0: >8}'.format(begin_data_offset).encode())
-        file_handle.write('{0: >8}'.format(end_data_offset).encode())
+    if int(text['ENDDATA']) <= byte_limit:
+        file_handle.write('{0: >8}'.format(text['BEGINDATA']).encode())
+        file_handle.write('{0: >8}'.format(text['ENDDATA']).encode())
     else:
         file_handle.write('{0: >8}'.format('0').encode())
         file_handle.write('{0: >8}'.format('0').encode())
