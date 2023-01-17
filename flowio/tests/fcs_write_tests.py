@@ -347,6 +347,9 @@ class CreateFCSTestCase(unittest.TestCase):
 
         metadata = flow_data.text.copy()
 
+        # FlowIO doesn't currently support writing files with non-float data types
+        metadata['datatype'] = 'F'
+
         fh = open(export_file_path, 'wb')
         with warnings.catch_warnings():
             warnings.simplefilter('ignore')
