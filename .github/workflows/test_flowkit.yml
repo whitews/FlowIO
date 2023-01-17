@@ -1,6 +1,9 @@
 name: Test FlowKit downstream
 
-on: [push]
+on:
+  push:
+    branches:
+      - master
 
 jobs:
   test-develop:
