@@ -204,6 +204,16 @@ class CreateFCSTestCase(unittest.TestCase):
             if k in FCS_STANDARD_KEYWORDS:
                 metadata_dict[k] = v
 
+        metadata_dict['$P1D'] = 'Linear,0,10'
+        metadata_dict['$P1F'] = '520LP'
+        metadata_dict['$P1L'] = '588'
+        metadata_dict['$P1O'] = '200'
+        metadata_dict['$P1P'] = '50'
+        metadata_dict['$P1T'] = 'PMT9524'
+        metadata_dict['$P1V'] = '250'
+        metadata_dict['$VOL'] = '120'
+        metadata_dict['$P1CALIBRATION'] = '1.234,MESF'
+
         export_file_path = "examples/fcs_files/test_fcs_export.fcs"
         fh = open(export_file_path, 'wb')
         create_fcs(fh, event_data, channel_names=pnn_labels, metadata_dict=metadata_dict)
@@ -212,10 +222,16 @@ class CreateFCSTestCase(unittest.TestCase):
         exported_flow_data = FlowData(export_file_path)
         os.unlink(export_file_path)
 
-        cyt_truth = 'Main Aria (FACSAria)'
-        cyt_value = exported_flow_data.text['cyt']
-
-        self.assertEqual(cyt_value, cyt_truth)
+        self.assertEqual(exported_flow_data.text['cyt'], 'Main Aria (FACSAria)')
+        self.assertEqual(exported_flow_data.text['p1d'], 'Linear,0,10')
+        self.assertEqual(exported_flow_data.text['p1f'], '520LP')
+        self.assertEqual(exported_flow_data.text['p1l'], '588')
+        self.assertEqual(exported_flow_data.text['p1o'], '200')
+        self.assertEqual(exported_flow_data.text['p1p'], '50')
+        self.assertEqual(exported_flow_data.text['p1t'], 'PMT9524')
+        self.assertEqual(exported_flow_data.text['p1v'], '250')
+        self.assertEqual(exported_flow_data.text['vol'], '120')
+        self.assertEqual(exported_flow_data.text['p1calibration'], '1.234,MESF')
 
     def test_create_fcs_with_non_std_metadata(self):
         event_data = self.flow_data.events

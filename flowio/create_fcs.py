@@ -64,16 +64,17 @@ def _build_text(
                 # skip it, these are allowed to be set by the user
                 continue
 
-            # Check for channel parameter keywords like:
+            # Check for channel parameter keywords that are handled in create_fcs:
             #   Pn(B, E, G, R, N, S)
             pnx_match = re.match(r'^(p)(\d+)([begrns])$', key)
             if pnx_match is not None:
                 # regardless of the channel parameter type, we'll skip it.
-                # All parameter metadata is handled separately
+                # These parameter keys are handled separately.
                 continue
 
             # check if the key is an FCS standard optional keyword
-            if key not in FCS_STANDARD_OPTIONAL_KEYWORDS:
+            pnx_match = re.match(r'^p\d+([dfloptv]|calibration)$', key)
+            if key not in FCS_STANDARD_OPTIONAL_KEYWORDS and pnx_match is None:
                 # save it for later, we'll put all the non-standard
                 # keys at the end
                 non_std_dict[key] = value
