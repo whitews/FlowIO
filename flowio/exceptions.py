@@ -13,3 +13,11 @@ class FlowIOWarning(Warning):
 class PnEWarning(FlowIOWarning):
     """Warning for invalid PnE values when creating FCS files"""
     pass
+
+class FlowIOException(Exception):
+    """Generic FlowIO exception"""
+    pass
+
+class DataOffsetDiscrepancyError(Exception):
+    """Generic FlowIO exception"""
+    pass
