@@ -4,6 +4,7 @@ import os
 import io
 import tempfile
 from flowio import FlowData
+from flowio.exceptions import DataOffsetDiscrepancyError
 
 
 class FlowDataTestCase(unittest.TestCase):
@@ -102,3 +103,11 @@ class FlowDataTestCase(unittest.TestCase):
         flow_data = FlowData('examples/fcs_files/G11.fcs')
 
         self.assertIsInstance(flow_data, FlowData)
+
+    def test_data_start_offset_discrepancy(self):
+        fcs_file = "examples/fcs_files/data_start_offset_discrepancy_example.fcs"
+        self.assertRaises(DataOffsetDiscrepancyError, FlowData, fcs_file)
+
+    def test_data_stop_offset_discrepancy(self):
+        fcs_file = "examples/fcs_files/data_stop_offset_discrepancy_example.fcs"
+        self.assertRaises(DataOffsetDiscrepancyError, FlowData, fcs_file)

@@ -129,22 +129,22 @@ class CreateFCSTestCase(unittest.TestCase):
         self.assertIsInstance(exported_flow_data_01, FlowData)
         self.assertListEqual(event_data_01, list(exported_flow_data_01.events))
         self.assertEqual(exported_flow_data_01.header['data_start'], 457)
-        self.assertEqual(exported_flow_data_01.header['data_end'], 996)
+        self.assertEqual(exported_flow_data_01.header['data_stop'], 996)
 
         self.assertIsInstance(exported_flow_data_02, FlowData)
         self.assertListEqual(event_data_02, list(exported_flow_data_02.events))
         self.assertEqual(exported_flow_data_02.header['data_start'], 458)
-        self.assertEqual(exported_flow_data_02.header['data_end'], 1001)
+        self.assertEqual(exported_flow_data_02.header['data_stop'], 1001)
 
         self.assertIsInstance(exported_flow_data_03, FlowData)
         self.assertListEqual(event_data_01, list(exported_flow_data_03.events))
         self.assertEqual(exported_flow_data_03.header['data_start'], 999)
-        self.assertEqual(exported_flow_data_03.header['data_end'], 1538)
+        self.assertEqual(exported_flow_data_03.header['data_stop'], 1538)
 
         self.assertIsInstance(exported_flow_data_04, FlowData)
         self.assertListEqual(event_data_01, list(exported_flow_data_04.events))
         self.assertEqual(exported_flow_data_04.header['data_start'], 1001)
-        self.assertEqual(exported_flow_data_04.header['data_end'], 1540)
+        self.assertEqual(exported_flow_data_04.header['data_stop'], 1540)
 
     def test_create_large_fcs(self):
         # create 100,000,000 bytes of event data
@@ -171,7 +171,7 @@ class CreateFCSTestCase(unittest.TestCase):
 
         self.assertIsInstance(exported_flow_data, FlowData)
         self.assertEqual(exported_flow_data.header['data_start'], 0)
-        self.assertEqual(exported_flow_data.header['data_end'], 0)
+        self.assertEqual(exported_flow_data.header['data_stop'], 0)
         self.assertGreater(int(exported_flow_data.text['enddata']), 99999999)
 
     def test_create_fcs_with_opt_channel_labels(self):
