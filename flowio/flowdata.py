@@ -44,12 +44,12 @@ class FlowData(object):
     :ivar channel_count: number of channels of event data
     :ivar channels: a dictionary of channel information, with key as channel number
         and value is a dictionary of the PnN and PnS text
-    ivar event_count: number of events
-    ivar events: 1-D array of event data
-    ivar file_size: file size of the imported FCS file
-    ivar header: dictionary of key/value pairs from the HEADER section
-    ivar name: file name of the imported FCS file
-    ivar text: dictionary of key/value pairs from the TEXT section
+    :ivar event_count: number of events
+    :ivar events: 1-D array of event data
+    :ivar file_size: file size of the imported FCS file
+    :ivar header: dictionary of key/value pairs from the HEADER section
+    :ivar name: file name of the imported FCS file
+    :ivar text: dictionary of key/value pairs from the TEXT section
 
     :param filename_or_handle: a path string or a file handle for an FCS file
     :param ignore_offset_error: option to ignore data offset error (see above note), default is False
