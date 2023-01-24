@@ -40,6 +40,8 @@ class FlowData(object):
         to True is equivalent to setting both options to True, meaning no
         error will be raised for an offset discrepancy.
 
+    :ivar analysis: description of attribute
+
     :param filename_or_handle: a path string or a file handle for an FCS file
     :param ignore_offset_error: option to ignore data offset error (see above note), default is False
     :param ignore_offset_discrepancy: option to ignore discrepancy between the HEADER
