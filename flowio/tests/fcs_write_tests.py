@@ -1,8 +1,10 @@
 import unittest
 import os
 import numpy as np
+import warnings
 from flowio import FlowData, create_fcs
 from flowio.fcs_keywords import FCS_STANDARD_KEYWORDS
+from flowio.exceptions import PnEWarning
 
 
 class CreateFCSTestCase(unittest.TestCase):
@@ -127,22 +129,22 @@ class CreateFCSTestCase(unittest.TestCase):
         self.assertIsInstance(exported_flow_data_01, FlowData)
         self.assertListEqual(event_data_01, list(exported_flow_data_01.events))
         self.assertEqual(exported_flow_data_01.header['data_start'], 457)
-        self.assertEqual(exported_flow_data_01.header['data_end'], 996)
+        self.assertEqual(exported_flow_data_01.header['data_stop'], 996)
 
         self.assertIsInstance(exported_flow_data_02, FlowData)
         self.assertListEqual(event_data_02, list(exported_flow_data_02.events))
         self.assertEqual(exported_flow_data_02.header['data_start'], 458)
-        self.assertEqual(exported_flow_data_02.header['data_end'], 1001)
+        self.assertEqual(exported_flow_data_02.header['data_stop'], 1001)
 
         self.assertIsInstance(exported_flow_data_03, FlowData)
         self.assertListEqual(event_data_01, list(exported_flow_data_03.events))
         self.assertEqual(exported_flow_data_03.header['data_start'], 999)
-        self.assertEqual(exported_flow_data_03.header['data_end'], 1538)
+        self.assertEqual(exported_flow_data_03.header['data_stop'], 1538)
 
         self.assertIsInstance(exported_flow_data_04, FlowData)
         self.assertListEqual(event_data_01, list(exported_flow_data_04.events))
         self.assertEqual(exported_flow_data_04.header['data_start'], 1001)
-        self.assertEqual(exported_flow_data_04.header['data_end'], 1540)
+        self.assertEqual(exported_flow_data_04.header['data_stop'], 1540)
 
     def test_create_large_fcs(self):
         # create 100,000,000 bytes of event data
@@ -169,7 +171,7 @@ class CreateFCSTestCase(unittest.TestCase):
 
         self.assertIsInstance(exported_flow_data, FlowData)
         self.assertEqual(exported_flow_data.header['data_start'], 0)
-        self.assertEqual(exported_flow_data.header['data_end'], 0)
+        self.assertEqual(exported_flow_data.header['data_stop'], 0)
         self.assertGreater(int(exported_flow_data.text['enddata']), 99999999)
 
     def test_create_fcs_with_opt_channel_labels(self):
@@ -202,6 +204,16 @@ class CreateFCSTestCase(unittest.TestCase):
             if k in FCS_STANDARD_KEYWORDS:
                 metadata_dict[k] = v
 
+        metadata_dict['$P1D'] = 'Linear,0,10'
+        metadata_dict['$P1F'] = '520LP'
+        metadata_dict['$P1L'] = '588'
+        metadata_dict['$P1O'] = '200'
+        metadata_dict['$P1P'] = '50'
+        metadata_dict['$P1T'] = 'PMT9524'
+        metadata_dict['$P1V'] = '250'
+        metadata_dict['$VOL'] = '120'
+        metadata_dict['$P1CALIBRATION'] = '1.234,MESF'
+
         export_file_path = "examples/fcs_files/test_fcs_export.fcs"
         fh = open(export_file_path, 'wb')
         create_fcs(fh, event_data, channel_names=pnn_labels, metadata_dict=metadata_dict)
@@ -210,10 +222,16 @@ class CreateFCSTestCase(unittest.TestCase):
         exported_flow_data = FlowData(export_file_path)
         os.unlink(export_file_path)
 
-        cyt_truth = 'Main Aria (FACSAria)'
-        cyt_value = exported_flow_data.text['cyt']
-
-        self.assertEqual(cyt_value, cyt_truth)
+        self.assertEqual(exported_flow_data.text['cyt'], 'Main Aria (FACSAria)')
+        self.assertEqual(exported_flow_data.text['p1d'], 'Linear,0,10')
+        self.assertEqual(exported_flow_data.text['p1f'], '520LP')
+        self.assertEqual(exported_flow_data.text['p1l'], '588')
+        self.assertEqual(exported_flow_data.text['p1o'], '200')
+        self.assertEqual(exported_flow_data.text['p1p'], '50')
+        self.assertEqual(exported_flow_data.text['p1t'], 'PMT9524')
+        self.assertEqual(exported_flow_data.text['p1v'], '250')
+        self.assertEqual(exported_flow_data.text['vol'], '120')
+        self.assertEqual(exported_flow_data.text['p1calibration'], '1.234,MESF')
 
     def test_create_fcs_with_non_std_metadata(self):
         event_data = self.flow_data.events
@@ -262,7 +280,7 @@ class CreateFCSTestCase(unittest.TestCase):
 
         self.assertEqual(exported_flow_data.text['p9g'], '2')
 
-    def test_create_fcs_with_log_pne(self):
+    def test_create_fcs_with_log_pne_warns(self):
         event_data = self.flow_data.events
         channel_names = self.flow_data.channels
         pnn_labels = [v['PnN'] for k, v in channel_names.items()]
@@ -272,73 +290,18 @@ class CreateFCSTestCase(unittest.TestCase):
         }
 
         export_file_path = "examples/fcs_files/test_fcs_export.fcs"
-        fh = open(export_file_path, 'wb')
 
-        create_fcs(fh, event_data, channel_names=pnn_labels, metadata_dict=metadata_dict)
-
-        fh.close()
-
-        exported_flow_data = FlowData(export_file_path)
-        os.unlink(export_file_path)
-
-        self.assertEqual(exported_flow_data.text['p9e'], '4,1')
-
-    def test_create_fcs_with_log0_pne(self):
-        """
-        This tests using the invalid PnE log0 value of 0.
-        Unfortunately, this is commonly found in files, and
-        FCS 3.1 states to treat it as a 1. create_fcs will
-        do this automatically if given decades > 0 and
-        log0 == 0
-        """
-        event_data = self.flow_data.events
-        channel_names = self.flow_data.channels
-        pnn_labels = [v['PnN'] for k, v in channel_names.items()]
-
-        metadata_dict = {
-            'p9e': '4,0'
-        }
-
-        export_file_path = "examples/fcs_files/test_fcs_export.fcs"
-        fh = open(export_file_path, 'wb')
-
-        create_fcs(fh, event_data, channel_names=pnn_labels, metadata_dict=metadata_dict)
-
-        fh.close()
-
-        exported_flow_data = FlowData(export_file_path)
-        os.unlink(export_file_path)
-
-        self.assertEqual(exported_flow_data.text['p9e'], '4,1')
-
-    def test_create_fcs_with_invalid_gain_with_log_pne(self):
-        """
-        This tests using the invalid combination of a log
-        scaling PnE value & gain value != 1.
-        """
-        event_data = self.flow_data.events
-        channel_names = self.flow_data.channels
-        pnn_labels = [v['PnN'] for k, v in channel_names.items()]
-
-        metadata_dict = {
-            'p9e': '4,1',
-            'p9g': '2'
-        }
-
-        export_file_path = "examples/fcs_files/test_fcs_export.fcs"
-        fh = open(export_file_path, 'wb')
-
-        self.assertRaises(
-            ValueError,
-            create_fcs,
-            fh,
-            event_data,
-            channel_names=pnn_labels,
-            metadata_dict=metadata_dict
-        )
-
-        fh.close()
-        os.unlink(export_file_path)
+        with open(export_file_path, 'wb') as fh:
+            with warnings.catch_warnings():
+                warnings.simplefilter('ignore')
+                self.assertWarns(
+                    PnEWarning,
+                    create_fcs,
+                    fh,
+                    event_data,
+                    channel_names=pnn_labels,
+                    metadata_dict=metadata_dict
+                )
 
     def test_create_fcs_with_pnr(self):
         """
@@ -400,8 +363,13 @@ class CreateFCSTestCase(unittest.TestCase):
 
         metadata = flow_data.text.copy()
 
+        # FlowIO doesn't currently support writing files with non-float data types
+        metadata['datatype'] = 'F'
+
         fh = open(export_file_path, 'wb')
-        create_fcs(fh, flow_data.events, pnn_labels, metadata_dict=metadata)
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore')
+            create_fcs(fh, flow_data.events, pnn_labels, metadata_dict=metadata)
         fh.close()
 
         exported_flow_data = FlowData(export_file_path)

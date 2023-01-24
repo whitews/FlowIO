@@ -1,0 +1,44 @@
+name: Test FlowKit downstream (develop)
+
+on:
+  push:
+    branches:
+      - develop
+
+jobs:
+  test-develop:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        python-version: ["3.7", "3.8", "3.9", "3.10"]
+
+    steps:
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Checkout FlowIO
+        uses: actions/checkout@v3
+        with:
+          ref: develop
+          path: flowio
+
+      - name: Checkout FlowKit (develop)
+        uses: actions/checkout@v3
+        with:
+          repository: whitews/FlowKit
+          ref: develop
+          path: flowkit
+
+      - name: Install FlowKit
+        working-directory: flowkit
+        run: |
+          pip install -r requirements.txt
+          pip install ../flowio
+
+      - name: Run FlowKit tests
+        working-directory: flowkit
+        run: |
+          python3 ./run_tests.py

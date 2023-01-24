@@ -6,6 +6,7 @@ import os
 import re
 from functools import reduce
 from .create_fcs import create_fcs
+from .exceptions import DataOffsetDiscrepancyError
 
 try:
     # noinspection PyUnresolvedReferences, PyUnboundLocalVariable
@@ -20,19 +21,42 @@ class FlowData(object):
     Object representing a Flow Cytometry Standard (FCS) file.
     FCS versions 2.0, 3.0, and 3.1 are supported.
 
-    Note:
+    Note on ignore_offset_error:
         Some FCS files incorrectly report the location of the last data byte
         as the last byte exclusive of the data section rather than the last
         byte inclusive of the data section. Technically, these are invalid
         FCS files but these are not corrupted data files. To attempt to read
         in these files, set the `ignore_offset_error` option to True.
 
+    Note on ignore_offset_discrepancy and use_header_offset:
+        The byte offset location for the DATA segment is defined in 2 places
+        in an FCS file: the HEADER and the TEXT segments. By default, FlowIO
+        uses the offset values found in the TEXT segment. If the HEADER values
+        differ from the TEXT values, a DataOffsetDiscrepancyError will be
+        raised. This option allows overriding this error to force the loading
+        of the FCS file. The related `use_header_offset` can be used to
+        force loading the file using the data offset locations found in the
+        HEADER section rather than the TEXT section. Setting `use_header_offset`
+        to True is equivalent to setting both options to True, meaning no
+        error will be raised for an offset discrepancy.
+
     :param filename_or_handle: a path string or a file handle for an FCS file
     :param ignore_offset_error: option to ignore data offset error (see above note), default is False
+    :param ignore_offset_discrepancy: option to ignore discrepancy between the HEADER
+        and TEXT values for the DATA byte offset location, default is False
+    :param use_header_offsets: use the HEADER section for the data offset locations, default is False.
+        Setting this option to True also suppresses an error in cases of an offset discrepancy.
     :param only_text: option to only read the "text" segment of the FCS file without loading event data,
         default is False
     """
-    def __init__(self, filename_or_handle, ignore_offset_error=False, only_text=False):
+    def __init__(
+            self,
+            filename_or_handle,
+            ignore_offset_error=False,
+            ignore_offset_discrepancy=False,
+            use_header_offsets=False,
+            only_text=False
+    ):
         if isinstance(filename_or_handle, basestring):
             self._fh = open(str(filename_or_handle), 'rb')
         else:
@@ -59,7 +83,8 @@ class FlowData(object):
         self.text = self.__parse_text(
             current_offset,
             self.header['text_start'],
-            self.header['text_stop'])
+            self.header['text_stop']
+        )
 
         self.channel_count = int(self.text['par'])
         self.event_count = int(self.text['tot'])
@@ -72,30 +97,94 @@ class FlowData(object):
         try:
             a_stop = int(self.text['endanalysis'])
         except KeyError:
-            a_stop = self.header['analysis_end']
+            a_stop = self.header['analysis_stop']
 
         self.analysis = self.__parse_analysis(current_offset, a_start, a_stop)
 
         # parse data
-        try:
-            d_start = int(self.text['begindata'])
-        except KeyError:
-            d_start = self.header['data_start']
-        try:
-            d_stop = int(self.text['enddata'])
-        except KeyError:
-            d_stop = self.header['data_end']
+        # Note: For FCS 3.0 & 3.1 files, byte offset locations can be found in both
+        #    the HEADER & TEXT segments. FCS 2.0 files only specify the HEADER for
+        #    storing offset locations, however these files will sometimes contain
+        #    TEXT keywords for the locations as well.
+        #
+        #    For 2.0 files we will check only the HEADER for the values.
+        #    For 3.0 & 3.1 We will check both & ensure they agree. If a discrepancy
+        #    is found, raise a DataOffsetDiscrepancyError. This behaviour can be
+        #    overriden by setting the ignore_offset_discrepancy option to True.
+        #    Users can force the use of the HEADER values for the data lookup by
+        #    setting the use_header_offsets option to True.
+        fcs_version = self.header['version']
 
-        if d_stop > self.file_size:
-            raise EOFError("FCS header indicates data section greater than file size")
+        # check if FCS version is supported (3.0, 3.1)
+        # If unsupported version, issue warning & try to parse like 3.1
+
+        header_data_start = self.header['data_start']
+        header_data_stop = self.header['data_stop']
+
+        if fcs_version == '2.0':
+            # FCS 2.0 didn't have offset keywords in TEXT.
+            # Also, if the user specifies we'll use the HEADER.
+            data_start = header_data_start
+            data_stop = header_data_stop
+        else:
+            # For 3.0, 3.1, or some other value, check if user specified,
+            # else use the TEXT section (but we'll check for discrepancy
+
+            if use_header_offsets:
+                # this option bypasses discrepancy checking between HEADER & TEXT values
+                data_start = header_data_start
+                data_stop = header_data_stop
+            else:
+                # use TEXT section
+                data_start = int(self.text['begindata'])
+                data_stop = int(self.text['enddata'])
+
+                # check if different from HEADER values & not due to large file
+                if data_start != header_data_start:
+                    # may be due to large file (>99,999,999) where HEADER values will be 0
+                    # The FCS 3.1 spec states:
+                    #   When any portion of a segment falls outside the 99,999,999 byte
+                    #   limit, '0's are substituted in the HEADER for that segments begin
+                    #   and end byte offset.
+                    # So we need to check the TEXT value for the DATA end location, since
+                    # the limit may not be reached at the start location. If the DATA end
+                    # offset is above the limit, BOTH the HEADER values should be 0.
+                    if header_data_start == 0 and data_stop > 99_999_999:
+                        # this is OK, it's just a large file
+                        pass
+                    elif ignore_offset_discrepancy:
+                        # user has specified to ignore the discrepancy
+                        pass
+                    else:
+                        raise DataOffsetDiscrepancyError(
+                            "%s has a discrepancy in the DATA start byte location: %d (HEADER) vs %d (TEXT)"
+                            % (self.name, header_data_start, data_start)
+                        )
+
+                # same logic for DATA stop location
+                if data_stop != header_data_stop:
+                    if header_data_stop == 0 and data_stop > 99_999_999:
+                        # this is OK, it's just a large file
+                        pass
+                    elif ignore_offset_discrepancy:
+                        # user has specified to ignore the discrepancy
+                        pass
+                    else:
+                        raise DataOffsetDiscrepancyError(
+                            "%s has a discrepancy in the DATA end byte location: %d (HEADER) vs %d (TEXT)"
+                            % (self.name, header_data_stop, data_stop)
+                        )
+
+        if data_stop > self.file_size:
+            raise EOFError("FCS file indicates data section greater than file size")
 
         if only_text:
             self.events = None
         else:
             self.events = self.__parse_data(
                 current_offset,
-                d_start,
-                d_stop,
+                data_start,
+                data_stop,
                 self.text
             )
 
@@ -125,19 +214,19 @@ class FlowData(object):
         data segments in a file
         """
         header = dict()
-        header['version'] = float(self.__read_bytes(offset, 3, 5))
+        header['version'] = self.__read_bytes(offset, 3, 5).decode()
         header['text_start'] = int(self.__read_bytes(offset, 10, 17))
         header['text_stop'] = int(self.__read_bytes(offset, 18, 25))
         header['data_start'] = int(self.__read_bytes(offset, 26, 33))
-        header['data_end'] = int(self.__read_bytes(offset, 34, 41))
+        header['data_stop'] = int(self.__read_bytes(offset, 34, 41))
         try:
             header['analysis_start'] = int(self.__read_bytes(offset, 42, 49))
         except ValueError:
             header['analysis_start'] = -1
         try:
-            header['analysis_end'] = int(self.__read_bytes(offset, 50, 57))
+            header['analysis_stop'] = int(self.__read_bytes(offset, 50, 57))
         except ValueError:
-            header['analysis_end'] = -1
+            header['analysis_stop'] = -1
 
         return header
 
