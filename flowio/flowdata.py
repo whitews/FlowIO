@@ -167,6 +167,7 @@ class FlowData(object):
                         # user has specified to ignore the discrepancy
                         pass
                     else:
+                        self._fh.close()
                         raise DataOffsetDiscrepancyError(
                             "%s has a discrepancy in the DATA start byte location: %d (HEADER) vs %d (TEXT)"
                             % (self.name, header_data_start, data_start)
@@ -181,13 +182,15 @@ class FlowData(object):
                         # user has specified to ignore the discrepancy
                         pass
                     else:
+                        self._fh.close()
                         raise DataOffsetDiscrepancyError(
                             "%s has a discrepancy in the DATA end byte location: %d (HEADER) vs %d (TEXT)"
                             % (self.name, header_data_stop, data_stop)
                         )
 
         if data_stop > self.file_size:
-            raise EOFError("FCS file indicates data section greater than file size")
+            self._fh.close()
+            raise FCSParsingError("FCS file indicates data section greater than file size")
 
         if only_text:
             self.events = None
@@ -284,6 +287,7 @@ class FlowData(object):
         data_type = text['datatype']
         mode = text['mode']
         if mode == 'c' or mode == 'u':
+            self._fh.close()
             raise NotImplementedError(
                 "FCS data stored as type \'%s\' is unsupported" % mode
             )
