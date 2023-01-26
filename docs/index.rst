@@ -35,13 +35,14 @@ count can be used to easily convert the event data to a multi-column NumPy array
     npy_data = numpy.reshape(fcs_data.events, (-1, fcs_data.channel_count))
 
 For higher level interaction with flow cytometry data, including GatingML and
-FlowJo 10 support, see the related [FlowKit](https://github.com/whitews/FlowKit)
-project.
+FlowJo 10 support, see the related FlowKit_ project.
+
+.. _FlowKit: https://github.com/whitews/FlowKit
 
 Changelogs
 __________
 
-[Changelogs for versions are available here](https://github.com/whitews/FlowIO/releases)
+`Changelogs for versions are available here <https://github.com/whitews/FlowIO/releases>`_
 
 Installation
 ------------
