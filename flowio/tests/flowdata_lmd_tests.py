@@ -1,6 +1,7 @@
 import unittest
 import warnings
 from flowio import FlowData
+from flowio.exceptions import FCSParsingError
 
 
 class FlowDataLMDTestCase(unittest.TestCase):
@@ -19,4 +20,4 @@ class FlowDataLMDTestCase(unittest.TestCase):
         self.assertEqual(self.flow_data.text['cyt'], 'Cytomics FC 500')
 
     def test_fail_data_offset_error(self):
-        self.assertRaises(ValueError, FlowData, 'examples/fcs_files/coulter.lmd')
+        self.assertRaises(FCSParsingError, FlowData, 'examples/fcs_files/coulter.lmd')

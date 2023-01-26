@@ -6,7 +6,7 @@ import os
 import re
 from functools import reduce
 from .create_fcs import create_fcs
-from .exceptions import DataOffsetDiscrepancyError
+from .exceptions import FCSParsingError, DataOffsetDiscrepancyError
 
 try:
     # noinspection PyUnresolvedReferences, PyUnboundLocalVariable
@@ -351,12 +351,12 @@ class FlowData(object):
 
                 err_msg = "FCS file %s reports a data offset that is off by 1. " % self.name
                 err_msg += "Set `ignore_offset_error=True` to force reading in this file."
-                raise ValueError(err_msg)
+                raise FCSParsingError(err_msg)
             else:
                 # attempt to close file handle before raising error
                 self._fh.close()
 
-                raise ValueError("Unable to determine the correct byte offsets for event data")
+                raise FCSParsingError("Unable to determine the correct byte offsets for event data")
 
         num_items = data_sect_size / data_type_size
 
@@ -447,7 +447,7 @@ class FlowData(object):
         elif b == 32:
             return 'I'
         else:
-            raise ValueError(
+            raise FCSParsingError(
                 "Invalid integer bit size (%d) for event data. Compatible sizes are 8, 16, & 32." % b
             )
 
