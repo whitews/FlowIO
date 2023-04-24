@@ -8,7 +8,9 @@ class FlowDataLMDTestCase(unittest.TestCase):
     def setUp(self):
         with warnings.catch_warnings():
             warnings.simplefilter('ignore')
-            self.flow_data = FlowData('examples/fcs_files/coulter.lmd', ignore_offset_error=True)
+            self.flow_data = FlowData('examples/fcs_files/coulter.lmd', 
+                                      ignore_offset_error=True,
+                                      multiframe_offset=0,)
         
     def test_event_count(self):
         self.assertEqual(
@@ -20,4 +22,5 @@ class FlowDataLMDTestCase(unittest.TestCase):
         self.assertEqual(self.flow_data.text['cyt'], 'Cytomics FC 500')
 
     def test_fail_data_offset_error(self):
-        self.assertRaises(FCSParsingError, FlowData, 'examples/fcs_files/coulter.lmd')
+        with self.assertRaises(FCSParsingError):     
+            FlowData('examples/fcs_files/coulter.lmd', multiframe_offset=0)
