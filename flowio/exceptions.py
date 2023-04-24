@@ -27,3 +27,10 @@ class DataOffsetDiscrepancyError(FCSParsingError):
     offsets for the DATA section.
     """
     pass
+
+class MultipleFramesDetectedError(FlowIOException):
+    """
+    Raised if a given FCS file contains more then one dataset, indicated by 
+    'nextdata' keyword.
+    """
+    pass
