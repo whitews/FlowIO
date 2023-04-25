@@ -18,6 +18,12 @@ class FlowIOException(Exception):
     """Generic FlowIO exception"""
     pass
 
-class DataOffsetDiscrepancyError(Exception):
-    """Generic FlowIO exception"""
+class FCSParsingError(FlowIOException):
+    """Errors relating to parsing an FCS file"""
+
+class DataOffsetDiscrepancyError(FCSParsingError):
+    """
+    Raised when an FCS file's HEADER & TEXT section provide different byte
+    offsets for the DATA section.
+    """
     pass

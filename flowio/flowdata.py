@@ -6,7 +6,7 @@ import os
 import re
 from functools import reduce
 from .create_fcs import create_fcs
-from .exceptions import DataOffsetDiscrepancyError
+from .exceptions import FCSParsingError, DataOffsetDiscrepancyError
 
 try:
     # noinspection PyUnresolvedReferences, PyUnboundLocalVariable
@@ -39,6 +39,17 @@ class FlowData(object):
         HEADER section rather than the TEXT section. Setting `use_header_offset`
         to True is equivalent to setting both options to True, meaning no
         error will be raised for an offset discrepancy.
+
+    :ivar analysis: dictionary of key/value pairs from the ANALYSIS section (if present)
+    :ivar channel_count: number of channels of event data
+    :ivar channels: a dictionary of channel information, with key as channel number
+        and value is a dictionary of the PnN and PnS text
+    :ivar event_count: number of events
+    :ivar events: 1-D array of event data
+    :ivar file_size: file size of the imported FCS file
+    :ivar header: dictionary of key/value pairs from the HEADER section
+    :ivar name: file name of the imported FCS file
+    :ivar text: dictionary of key/value pairs from the TEXT section
 
     :param filename_or_handle: a path string or a file handle for an FCS file
     :param ignore_offset_error: option to ignore data offset error (see above note), default is False
@@ -156,6 +167,7 @@ class FlowData(object):
                         # user has specified to ignore the discrepancy
                         pass
                     else:
+                        self._fh.close()
                         raise DataOffsetDiscrepancyError(
                             "%s has a discrepancy in the DATA start byte location: %d (HEADER) vs %d (TEXT)"
                             % (self.name, header_data_start, data_start)
@@ -170,13 +182,15 @@ class FlowData(object):
                         # user has specified to ignore the discrepancy
                         pass
                     else:
+                        self._fh.close()
                         raise DataOffsetDiscrepancyError(
                             "%s has a discrepancy in the DATA end byte location: %d (HEADER) vs %d (TEXT)"
                             % (self.name, header_data_stop, data_stop)
                         )
 
         if data_stop > self.file_size:
-            raise EOFError("FCS file indicates data section greater than file size")
+            self._fh.close()
+            raise FCSParsingError("FCS file indicates data section greater than file size")
 
         if only_text:
             self.events = None
@@ -273,6 +287,7 @@ class FlowData(object):
         data_type = text['datatype']
         mode = text['mode']
         if mode == 'c' or mode == 'u':
+            self._fh.close()
             raise NotImplementedError(
                 "FCS data stored as type \'%s\' is unsupported" % mode
             )
@@ -336,12 +351,12 @@ class FlowData(object):
 
                 err_msg = "FCS file %s reports a data offset that is off by 1. " % self.name
                 err_msg += "Set `ignore_offset_error=True` to force reading in this file."
-                raise ValueError(err_msg)
+                raise FCSParsingError(err_msg)
             else:
                 # attempt to close file handle before raising error
                 self._fh.close()
 
-                raise ValueError("Unable to determine the correct byte offsets for event data")
+                raise FCSParsingError("Unable to determine the correct byte offsets for event data")
 
         num_items = data_sect_size / data_type_size
 
@@ -432,7 +447,7 @@ class FlowData(object):
         elif b == 32:
             return 'I'
         else:
-            raise ValueError(
+            raise FCSParsingError(
                 "Invalid integer bit size (%d) for event data. Compatible sizes are 8, 16, & 32." % b
             )
 
