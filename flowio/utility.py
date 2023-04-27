@@ -23,12 +23,12 @@ def read_multiple_flowframes(filename_or_handle,
     frames = []
     nextdata_offset = 0
     while True:
-        frame = FlowData(filename_or_handle, 
-                         ignore_offset_error, 
-                         ignore_offset_discrepancy, 
-                         use_header_offsets, 
-                         only_text, 
-                         multiframe_offset=nextdata_offset)
+        frame = FlowData(filename_or_handle,
+                         ignore_offset_error,
+                         ignore_offset_discrepancy,
+                         use_header_offsets,
+                         only_text,
+                         nextdata_offset=nextdata_offset)
         frames.append(frame)
         nextdata = int(frame.text["nextdata"])
         if nextdata == 0:

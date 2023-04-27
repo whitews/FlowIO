@@ -59,8 +59,8 @@ class FlowData(object):
         Setting this option to True also suppresses an error in cases of an offset discrepancy.
     :param only_text: option to only read the "text" segment of the FCS file without loading event data,
         default is False
-    :param multiframe_offset: an integer indicating where to start parsing the flowdata, used for reading
-        datasets from files which contain multiple frames, e.g. '.lmd' files containing a fcs 2.0 and 3.0
+    :param nextdata_offset: an integer indicating the byte offset for a data set, used for reading
+        a data set from FCS file contain multiple data sets
     """
     def __init__(
             self,
@@ -69,14 +69,14 @@ class FlowData(object):
             ignore_offset_discrepancy=False,
             use_header_offsets=False,
             only_text=False,
-            multiframe_offset=None,
+            nextdata_offset=None,
     ):
         if isinstance(filename_or_handle, basestring):
             self._fh = open(str(filename_or_handle), 'rb')
         else:
             self._fh = filename_or_handle
 
-        current_offset = multiframe_offset if multiframe_offset else 0
+        current_offset = nextdata_offset if nextdata_offset else 0
 
         self._ignore_offset = ignore_offset_error
 
@@ -100,7 +100,7 @@ class FlowData(object):
             self.header['text_stop']
         )
 
-        if int(self.text.get("nextdata", "0")) != 0 and multiframe_offset is None:
+        if int(self.text.get("nextdata", "0")) != 0 and nextdata_offset is None:
             raise MultipleFramesDetectedError()
 
         self.channel_count = int(self.text['par'])
