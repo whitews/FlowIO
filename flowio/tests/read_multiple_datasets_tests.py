@@ -1,7 +1,7 @@
 import unittest
-from flowio.exceptions import MultipleFramesDetectedError
+from flowio.exceptions import MultipleDataSetsError
 from flowio.flowdata import FlowData
-from flowio.utility import read_multiple_flowframes
+from flowio.utility import read_multiple_data_sets
 
 class MultipleDatasetsTestCase(unittest.TestCase):
     def setUp(self):
@@ -11,11 +11,11 @@ class MultipleDatasetsTestCase(unittest.TestCase):
         self.event_count = 18110
 
     def test_raise_error(self):
-        with self.assertRaises(MultipleFramesDetectedError):
+        with self.assertRaises(MultipleDataSetsError):
             FlowData(self.file)
 
     def test_read_multiple_flowframes(self):
-        frames = read_multiple_flowframes(self.file, ignore_offset_error=True)
+        frames = read_multiple_data_sets(self.file, ignore_offset_error=True)
 
         self.assertEqual(len(frames), 2)
         self.assertIsInstance(frames[0], FlowData)
