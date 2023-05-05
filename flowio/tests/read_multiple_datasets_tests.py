@@ -14,20 +14,18 @@ class MultipleDatasetsTestCase(unittest.TestCase):
         with self.assertRaises(MultipleDataSetsError):
             FlowData(self.file)
 
-    def test_read_multiple_flowframes(self):
-        frames = read_multiple_data_sets(self.file, ignore_offset_error=True)
+    def test_read_multiple_data_sets(self):
+        fd_data_sets = read_multiple_data_sets(self.file, ignore_offset_error=True)
 
-        self.assertEqual(len(frames), 2)
-        self.assertIsInstance(frames[0], FlowData)
-        self.assertIsInstance(frames[1], FlowData)
+        self.assertEqual(len(fd_data_sets), 2)
+        self.assertIsInstance(fd_data_sets[0], FlowData)
+        self.assertIsInstance(fd_data_sets[1], FlowData)
 
-        self.assertEqual(frames[0].header["version"], "2.0")
-        self.assertEqual(frames[1].header["version"], "3.0")
+        self.assertEqual(fd_data_sets[0].header["version"], "2.0")
+        self.assertEqual(fd_data_sets[1].header["version"], "3.0")
 
-        self.assertEqual(frames[0].channel_count, self.channel_count)
-        self.assertEqual(frames[1].channel_count, self.channel_count)
+        self.assertEqual(fd_data_sets[0].channel_count, self.channel_count)
+        self.assertEqual(fd_data_sets[1].channel_count, self.channel_count)
 
-        self.assertEqual(frames[0].event_count, self.event_count)
-        self.assertEqual(frames[1].event_count, self.event_count)
-
-
+        self.assertEqual(fd_data_sets[0].event_count, self.event_count)
+        self.assertEqual(fd_data_sets[1].event_count, self.event_count)
