@@ -6,7 +6,7 @@ import os
 import re
 from functools import reduce
 from .create_fcs import create_fcs
-from .exceptions import FCSParsingError, DataOffsetDiscrepancyError
+from .exceptions import FCSParsingError, DataOffsetDiscrepancyError, MultipleDataSetsError
 
 try:
     # noinspection PyUnresolvedReferences, PyUnboundLocalVariable
@@ -59,6 +59,8 @@ class FlowData(object):
         Setting this option to True also suppresses an error in cases of an offset discrepancy.
     :param only_text: option to only read the "text" segment of the FCS file without loading event data,
         default is False
+    :param nextdata_offset: an integer indicating the byte offset for a data set, used for reading
+        a data set from FCS file contain multiple data sets
     """
     def __init__(
             self,
@@ -66,14 +68,15 @@ class FlowData(object):
             ignore_offset_error=False,
             ignore_offset_discrepancy=False,
             use_header_offsets=False,
-            only_text=False
+            only_text=False,
+            nextdata_offset=None,
     ):
         if isinstance(filename_or_handle, basestring):
             self._fh = open(str(filename_or_handle), 'rb')
         else:
             self._fh = filename_or_handle
 
-        current_offset = 0
+        current_offset = nextdata_offset if nextdata_offset else 0
 
         self._ignore_offset = ignore_offset_error
 
@@ -96,6 +99,9 @@ class FlowData(object):
             self.header['text_start'],
             self.header['text_stop']
         )
+
+        if int(self.text.get("nextdata", "0")) != 0 and nextdata_offset is None:
+            raise MultipleDataSetsError()
 
         self.channel_count = int(self.text['par'])
         self.event_count = int(self.text['tot'])

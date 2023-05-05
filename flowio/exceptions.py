@@ -27,3 +27,10 @@ class DataOffsetDiscrepancyError(FCSParsingError):
     offsets for the DATA section.
     """
     pass
+
+class MultipleDataSetsError(FlowIOException):
+    """
+    Raised for errors related to FCS files containing more than one dataset, indicated by
+    the 'nextdata' keyword.
+    """
+    pass

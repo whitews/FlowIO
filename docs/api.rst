@@ -10,6 +10,12 @@ FlowData Class
 .. autoclass:: flowio.FlowData
     :members:
 
+Reading FCS Files with Multiple Data Sets
+-----------------------------------------
+
+.. automodule:: flowio.read_multiple_data_sets
+   :members:
+
 Creating New FCS Files
 ----------------------
 
