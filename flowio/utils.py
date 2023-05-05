@@ -24,7 +24,6 @@ def read_multiple_data_sets(
     """
     data_sets = []
     nextdata_offset = 0
-    total_file_size = None  # used to
 
     # Multi-data set FCS files contain a 'nextdata' keyword with the byte
     # offset to the next data set. Note, the 3.1 spec deprecates this

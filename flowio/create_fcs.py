@@ -193,9 +193,9 @@ def create_fcs(
     # different bit allocations for event data per channel. Float is
     # easy b/c all parameters must use 32 bits per event value.
     if 'datatype' in proc_metadata_dict:
-        dtype_value = proc_metadata_dict['datatype']
-        if dtype_value != 'F':
-            raise NotImplementedError("Creating FCS files with data type %s is not supported." % dtype_value)
+        datatype_value = proc_metadata_dict['datatype']
+        if datatype_value != 'F':
+            raise NotImplementedError("Creating FCS files with data type %s is not supported." % datatype_value)
 
     for i in range(n_channels):
         chan_num = i + 1  # channel numbers in FCS are indexed at 1
