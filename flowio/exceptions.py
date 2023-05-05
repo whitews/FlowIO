@@ -28,9 +28,9 @@ class DataOffsetDiscrepancyError(FCSParsingError):
     """
     pass
 
-class MultipleFramesDetectedError(FlowIOException):
+class MultipleDataSetsError(FlowIOException):
     """
-    Raised if a given FCS file contains more then one dataset, indicated by 
-    'nextdata' keyword.
+    Raised for errors related to FCS files containing more than one dataset, indicated by
+    the 'nextdata' keyword.
     """
     pass

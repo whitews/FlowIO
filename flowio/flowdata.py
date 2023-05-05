@@ -6,7 +6,7 @@ import os
 import re
 from functools import reduce
 from .create_fcs import create_fcs
-from .exceptions import FCSParsingError, DataOffsetDiscrepancyError, MultipleFramesDetectedError
+from .exceptions import FCSParsingError, DataOffsetDiscrepancyError, MultipleDataSetsError
 
 try:
     # noinspection PyUnresolvedReferences, PyUnboundLocalVariable
@@ -101,7 +101,7 @@ class FlowData(object):
         )
 
         if int(self.text.get("nextdata", "0")) != 0 and nextdata_offset is None:
-            raise MultipleFramesDetectedError()
+            raise MultipleDataSetsError()
 
         self.channel_count = int(self.text['par'])
         self.event_count = int(self.text['tot'])
