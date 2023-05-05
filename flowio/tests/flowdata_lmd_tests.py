@@ -8,9 +8,11 @@ class FlowDataLMDTestCase(unittest.TestCase):
     def setUp(self):
         with warnings.catch_warnings():
             warnings.simplefilter('ignore')
-            self.flow_data = FlowData('examples/fcs_files/coulter.lmd',
-                                      ignore_offset_error=True,
-                                      nextdata_offset=0, )
+            self.flow_data = FlowData(
+                'examples/fcs_files/coulter.lmd',
+                ignore_offset_error=True,
+                nextdata_offset=0
+            )
         
     def test_event_count(self):
         self.assertEqual(
