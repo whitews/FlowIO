@@ -4,7 +4,6 @@ from struct import calcsize, iter_unpack
 from warnings import warn
 import os
 import re
-import math
 from functools import reduce
 from .create_fcs import create_fcs
 from .exceptions import FCSParsingError, DataOffsetDiscrepancyError, MultipleDataSetsError
