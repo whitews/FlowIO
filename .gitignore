@@ -8,3 +8,4 @@ scratch/
 *.egg
 *.fcs
 *.egg-info
+/docs/_build/*

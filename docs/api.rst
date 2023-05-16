@@ -1,26 +1,24 @@
+.. currentmodule:: flowio
+
 FlowIO API
 ===================================
-
-FlowIO includes a single FlowData class for reading existing FCS files and
-a :code:`create_fcs` function for creating new FCS files.
 
 FlowData Class
 --------------
 
-.. autoclass:: flowio.FlowData
+.. autoclass:: FlowData
     :members:
+
 
 Reading FCS Files with Multiple Data Sets
 -----------------------------------------
 
-.. automodule:: flowio.read_multiple_data_sets
-   :members:
+.. autofunction:: read_multiple_data_sets
 
 Creating New FCS Files
 ----------------------
 
-.. automodule:: flowio.create_fcs
-   :members:
+.. autofunction:: create_fcs
 
 FlowIO Exceptions
 -----------------
