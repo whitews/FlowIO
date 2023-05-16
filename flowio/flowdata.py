@@ -4,6 +4,7 @@ from struct import calcsize, iter_unpack
 from warnings import warn
 import os
 import re
+import math
 from functools import reduce
 from .create_fcs import create_fcs
 from .exceptions import FCSParsingError, DataOffsetDiscrepancyError, MultipleDataSetsError
@@ -307,16 +308,19 @@ class FlowData(object):
             order = '@'
             # from here on out we assume mode "l" (list)
 
-        bit_width = []
+        bit_width_by_channel = {}
+        max_range_by_channel = {}
         for i in range(1, int(text['par']) + 1):
-            bit_width.append(int(text['p%db' % i]))
+            bit_width_by_channel[i] = int(text['p%db' % i])
+            max_range_by_channel[i] = int(text['p%dr' % i])
 
         if data_type.lower() == 'i':
             data = self.__parse_int_data(
                 offset,
                 start,
                 stop,
-                bit_width,
+                bit_width_by_channel,
+                max_range_by_channel,
                 order
             )
         else:
@@ -368,42 +372,69 @@ class FlowData(object):
 
         return num_items, stop
 
-    def __parse_int_data(self, offset, start, stop, bit_width, order):
+    def __parse_int_data(self, offset, start, stop, bit_width_by_channel, 
+                         max_range_by_channel, order):
         """Parse out and return integer list data from FCS file"""
 
-        if reduce(and_, [item in [8, 16, 32] for item in bit_width]):
+        if reduce(and_, [item in [8, 16, 32] for item in bit_width_by_channel.values()]):
             # We have a uniform bit width for all parameters,
             # use the first value to determine the number of actual events
-            if len(set(bit_width)) == 1:
-                data_type_size = bit_width[0] / 8
+            if len(set(bit_width_by_channel.values())) == 1:
+                bit_width = list(bit_width_by_channel.values())[0]
+                data_type_size = bit_width / 8
                 num_items, stop = self.__calc_data_item_count(start, stop, data_type_size)
 
                 self._fh.seek(offset + start)
-                tmp = array.array(self.__format_integer(bit_width[0]))
+                tmp = array.array(self.__format_integer(bit_width))
                 tmp.fromfile(self._fh, int(num_items))
                 if order == '>':
                     tmp.byteswap()
-
+                # acording to the FCS standard the PnR value of Integer values
+                # determines how many bit of the max bit_width are actually used
+                # for the data
+                if any(2**bit_width_by_channel[c] > max_range_by_channel[c] for 
+                       c in bit_width_by_channel.keys()) :
+                    # for i in range(len(tmp)):
+                    #     value = tmp.pop(0)
+                    #     channel = i % len(bit_width_by_channel) + 1
+                    #     tmp.append(value % max_range_by_channel[channel])
+                    amount_data_points = int(num_items / len(max_range_by_channel))
+                    #create bit mask for extracting the right amount of bits
+                    bit_mask = array.array(self.__format_integer(bit_width), 
+                                           [mr -1 for mr in max_range_by_channel.values()]*amount_data_points)
+                    new_tmp = array.array(self.__format_integer(bit_width))
+                    new_tmp.frombytes(bytes(map(lambda a,b: a&b, tmp.tobytes(), bit_mask.tobytes())))
+                    tmp = new_tmp
             # parameter sizes are different
             # e.g. 8, 8, 16, 8, 32 ...
             else:
                 # can't use array for heterogeneous bit widths
-                tmp = self.__extract_var_length_int(bit_width, offset, order, start, stop)
+                tmp = self.__extract_var_length_int(bit_width_by_channel, max_range_by_channel,
+                                                    offset, order, start, stop)
 
         else:  # non standard bit width...  Does this happen?
             warn('Non-standard bit width for data segments')
             return None
         return tmp
 
-    def __extract_var_length_int(self, bit_width, offset, order, start, stop):
+    def __extract_var_length_int(self, bit_width_by_channel, max_range_by_channel, 
+                                 offset, order, start, stop):
         data_format = order
-        for cur_width in bit_width:
+        for cur_width in bit_width_by_channel.values():
             data_format += '%s' % self.__format_integer(cur_width)
 
         # array module doesn't have a function to heterogeneous bit widths,
         # so fall back to the slower unpack approach
         tuple_tmp = iter_unpack(data_format, self.__read_bytes(offset, start, stop))
-        tmp = [ti for t in tuple_tmp for ti in t]
+        if any(2**bit_width_by_channel[c] > max_range_by_channel[c] for 
+               c in bit_width_by_channel.keys()) :
+            tmp = []
+            for data_tuple in tuple_tmp:
+                for channel, max_range in max_range_by_channel.items():
+                    tmp.append(data_tuple[channel-1] % max_range)
+        else:
+            tmp = [ti for t in tuple_tmp for ti in t]
+        
         return tmp
 
     def __parse_non_int_data(self, offset, start, stop, data_type, order):
