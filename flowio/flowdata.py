@@ -383,6 +383,8 @@ class FlowData(object):
                 data_type_size = bit_width / 8
                 num_items, stop = self.__calc_data_item_count(start, stop, data_type_size)
 
+                # Here, we're reading the initial data array, but some channel
+                # data may still need bit-masking correction using max range
                 self._fh.seek(offset + start)
                 tmp = array.array(self.__format_integer(bit_width))
                 tmp.fromfile(self._fh, int(num_items))
@@ -404,9 +406,9 @@ class FlowData(object):
                     new_tmp = array.array(self.__format_integer(bit_width))
                     new_tmp.frombytes(bytes(map(lambda a,b: a&b, tmp.tobytes(), bit_mask.tobytes())))
                     tmp = new_tmp
-            # parameter sizes are different
-            # e.g. 8, 8, 16, 8, 32 ...
             else:
+                # parameter sizes are different
+                # e.g. 8, 8, 16, 8, 32 ...
                 # can't use array for heterogeneous bit widths
                 tmp = self.__extract_var_length_int(bit_width_by_channel, max_range_by_channel,
                                                     offset, order, start, stop)
@@ -414,6 +416,7 @@ class FlowData(object):
         else:  # non standard bit width...  Does this happen?
             warn('Non-standard bit width for data segments')
             return None
+
         return tmp
 
     def __extract_var_length_int(self, bit_width_by_channel, max_range_by_channel, 
