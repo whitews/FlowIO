@@ -371,15 +371,24 @@ class FlowData(object):
 
         return num_items, stop
 
-    def __parse_int_data(self, offset, start, stop, bit_width_by_channel, 
-                         max_range_by_channel, order):
+    def __parse_int_data(
+            self,
+            offset,
+            start,
+            stop,
+            bit_width_lut,
+            max_range_lut,
+            order
+    ):
         """Parse out and return integer list data from FCS file"""
 
-        if reduce(and_, [item in [8, 16, 32] for item in bit_width_by_channel.values()]):
-            # We have a uniform bit width for all parameters,
-            # use the first value to determine the number of actual events
-            if len(set(bit_width_by_channel.values())) == 1:
-                bit_width = list(bit_width_by_channel.values())[0]
+        if reduce(and_, [item in [8, 16, 32] for item in bit_width_lut.values()]):
+            # Determine if we have uniform bit width values for all parameters.
+            # If so, use array.array for much faster parsing
+            if len(set(bit_width_lut.values())) == 1:
+                # We do have a uniform bit width, grab the 1st value to
+                # determine the number of actual events
+                bit_width = list(bit_width_lut.values())[0]
                 data_type_size = bit_width / 8
                 num_items, stop = self.__calc_data_item_count(start, stop, data_type_size)
 
@@ -390,19 +399,21 @@ class FlowData(object):
                 tmp.fromfile(self._fh, int(num_items))
                 if order == '>':
                     tmp.byteswap()
-                # acording to the FCS standard the PnR value of Integer values
-                # determines how many bit of the max bit_width are actually used
-                # for the data
-                if any(2**bit_width_by_channel[c] > max_range_by_channel[c] for 
-                       c in bit_width_by_channel.keys()) :
-                    # for i in range(len(tmp)):
-                    #     value = tmp.pop(0)
-                    #     channel = i % len(bit_width_by_channel) + 1
-                    #     tmp.append(value % max_range_by_channel[channel])
-                    amount_data_points = int(num_items / len(max_range_by_channel))
-                    #create bit mask for extracting the right amount of bits
-                    bit_mask = array.array(self.__format_integer(bit_width), 
-                                           [mr -1 for mr in max_range_by_channel.values()]*amount_data_points)
+
+                # If any bits higher shall be
+                # ignored using a bit mask. If the PnR value is not a power
+                # of 2, then the next power of 2 shall be used.
+                if any(2 ** bit_width_lut[c] > max_range_lut[c] for
+                       c in bit_width_lut.keys()) :
+
+                    amount_data_points = int(num_items / len(max_range_lut))
+                    
+                    # Create bit mask array matching length of our data array,
+                    # with values for every position being the max range value.
+                    bit_mask = array.array(
+                        self.__format_integer(bit_width),
+                        [mr - 1 for mr in max_range_lut.values()] * amount_data_points
+                    )
                     new_tmp = array.array(self.__format_integer(bit_width))
                     new_tmp.frombytes(bytes(map(lambda a,b: a&b, tmp.tobytes(), bit_mask.tobytes())))
                     tmp = new_tmp
@@ -410,8 +421,14 @@ class FlowData(object):
                 # parameter sizes are different
                 # e.g. 8, 8, 16, 8, 32 ...
                 # can't use array for heterogeneous bit widths
-                tmp = self.__extract_var_length_int(bit_width_by_channel, max_range_by_channel,
-                                                    offset, order, start, stop)
+                tmp = self.__extract_var_length_int(
+                    bit_width_lut,
+                    max_range_lut,
+                    offset,
+                    order,
+                    start,
+                    stop
+                )
 
         else:  # non standard bit width...  Does this happen?
             warn('Non-standard bit width for data segments')
