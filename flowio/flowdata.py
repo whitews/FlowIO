@@ -108,7 +108,10 @@ class FlowData(object):
         )
 
         if int(self.text.get("nextdata", "0")) != 0 and nextdata_offset is None:
-            raise MultipleDataSetsError()
+            self._fh.close()
+            raise MultipleDataSetsError(
+                "%s contains multiple data sets, use read_multiple_data_sets function" % self.name
+            )
 
         self.channel_count = int(self.text['par'])
         self.event_count = int(self.text['tot'])
