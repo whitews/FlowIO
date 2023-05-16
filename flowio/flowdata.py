@@ -16,6 +16,13 @@ except NameError:
     basestring = str
 
 
+def _next_power_of_2(x):
+    if x == 0:
+        return 1
+    else:
+        return 2 ** (x - 1).bit_length()
+
+
 class FlowData(object):
     """
     Object representing a Flow Cytometry Standard (FCS) file.
@@ -307,13 +314,21 @@ class FlowData(object):
             order = '@'
             # from here on out we assume mode "l" (list)
 
-        bit_width_by_channel = {}
-        max_range_by_channel = {}
-        for i in range(1, int(text['par']) + 1):
-            bit_width_by_channel[i] = int(text['p%db' % i])
-            max_range_by_channel[i] = int(text['p%dr' % i])
-
         if data_type.lower() == 'i':
+            # For int data we need to check the bit width and range values.
+            # The PnR value specifies the max value for the channel. This
+            # value is exclusive, e.g. a value of 1024 means the highest
+            # integer value allowed is 1023. Integer data needs to be
+            # bit-masked according to this max range value.
+            bit_width_by_channel = {}
+            max_range_by_channel = {}
+            for i in range(1, int(text['par']) + 1):
+                bit_width_by_channel[i] = int(text['p%db' % i])
+
+                # Need to verify the value is a power of 2
+                tmp_max_range = int(text['p%dr' % i])
+                max_range_by_channel[i] = _next_power_of_2(tmp_max_range)
+
             data = self.__parse_int_data(
                 offset,
                 start,
