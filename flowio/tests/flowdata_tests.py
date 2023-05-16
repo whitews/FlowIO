@@ -65,11 +65,29 @@ class FlowDataTestCase(unittest.TestCase):
         event_values = [
             49135, 61373, 48575, 49135, 61373, 48575, 7523, 598, 49135, 61373,
             48575, 49135, 61373, 48575, 28182, 61200, 48575, 49135, 32445, 30797,
-            19057, 49135, 61373, 48575, 5969, 7967621,
+            19057, 49135, 61373, 48575, 5969, 8265081,
             61266, 48575, 49135, 20925, 61265, 48575, 27961, 25200, 61287, 48575, 9795,
             49135, 29117, 49135, 61373, 48575, 61228, 48575, 22, 21760, 49135,
-            20413, 49135, 23997, 19807, 2984945
+            20413, 49135, 23997, 19807, 15691602
         ]
+
+        # To double-check our logic, let's use the 2 values from
+        # channel 26 where:
+        # PnB is 32
+        # PnR is 11209599
+        # The 1st value for chan 26, 32-bit, unmasked:  142482809
+        # The 2nd value for chan 26, 32-bit, unmasked: 3220139858
+        # The next power of 2 above 11209599 (PnR) is:   16777216
+        # Subtracting 1 from this power of 2, we can see what the
+        # new values should be from the binary:
+        #   1st value:
+        #   0000 1000 0111 1110 0001 1101 0111 1001     142482809 (orig 32-bit value)
+        #   0000 0000 1111 1111 1111 1111 1111 1111      16777215 (2 ** 24 - 1)
+        #   0000 0000 0111 1110 0001 1101 0111 1001       8265081 (new value)
+        #   2nd value:
+        #   1011 1111 1110 1111 0110 1111 0101 0010    3220139858 (orig 32-bit value)
+        #   0000 0000 1111 1111 1111 1111 1111 1111      16777215 (2 ** 24 - 1)
+        #   0000 0000 1110 1111 0110 1111 0101 0010      15691602 (new value)
 
         fcs_file = "examples/fcs_files/variable_int_example.fcs"
         sample = FlowData(fcs_file)
