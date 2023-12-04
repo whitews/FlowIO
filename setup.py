@@ -16,6 +16,7 @@ setup(
     name='FlowIO',
     version=__version__,
     packages=['flowio'],
+    package_dir={'': "src"},
     package_data={'': []},
     description='FlowIO is a Python library for reading / writing Flow Cytometry Standard (FCS) files',
     long_description=long_description,
