@@ -1,7 +1,7 @@
 from setuptools import setup
 
 # read in version string
-VERSION_FILE = 'flowio/_version.py'
+VERSION_FILE = 'src/flowio/_version.py'
 __version__ = ''  # to avoid inspection warning and check if __version__ was loaded
 exec(open(VERSION_FILE).read())
 
