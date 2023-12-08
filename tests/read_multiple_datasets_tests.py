@@ -1,4 +1,5 @@
 import unittest
+import warnings
 from flowio.exceptions import MultipleDataSetsError
 from flowio.flowdata import FlowData
 from flowio.utils import read_multiple_data_sets
@@ -12,10 +13,14 @@ class MultipleDatasetsTestCase(unittest.TestCase):
 
     def test_raise_error(self):
         with self.assertRaises(MultipleDataSetsError):
-            FlowData(self.file)
+            with warnings.catch_warnings():
+                warnings.simplefilter('ignore')
+                FlowData(self.file)
 
     def test_read_multiple_data_sets(self):
-        fd_data_sets = read_multiple_data_sets(self.file, ignore_offset_error=True)
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore')
+            fd_data_sets = read_multiple_data_sets(self.file, ignore_offset_error=True)
 
         self.assertEqual(len(fd_data_sets), 2)
         self.assertIsInstance(fd_data_sets[0], FlowData)

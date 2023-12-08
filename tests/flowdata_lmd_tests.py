@@ -24,8 +24,10 @@ class FlowDataLMDTestCase(unittest.TestCase):
         self.assertEqual(self.flow_data.text['cyt'], 'Cytomics FC 500')
 
     def test_fail_data_offset_error(self):
-        with self.assertRaises(FCSParsingError):     
-            FlowData('examples/fcs_files/coulter.lmd', nextdata_offset=0)
+        with self.assertRaises(FCSParsingError):
+            with warnings.catch_warnings():
+                warnings.simplefilter('ignore')
+                FlowData('examples/fcs_files/coulter.lmd', nextdata_offset=0)
 
     def test_right_integer_reading(self):
         self.assertEqual(
