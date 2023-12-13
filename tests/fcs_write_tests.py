@@ -300,6 +300,7 @@ class CreateFCSTestCase(unittest.TestCase):
                     fh,
                     event_data,
                     channel_names=pnn_labels,
+                    opt_channel_names=None,
                     metadata_dict=metadata_dict
                 )
 
