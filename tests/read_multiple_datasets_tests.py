@@ -4,6 +4,7 @@ from flowio.exceptions import MultipleDataSetsError
 from flowio.flowdata import FlowData
 from flowio.utils import read_multiple_data_sets
 
+
 class MultipleDatasetsTestCase(unittest.TestCase):
     def setUp(self):
         self.file = "examples/fcs_files/coulter.lmd"
