@@ -137,7 +137,7 @@ class FlowData(object):
         #    For 2.0 files we will check only the HEADER for the values.
         #    For 3.0 & 3.1 We will check both & ensure they agree. If a discrepancy
         #    is found, raise a DataOffsetDiscrepancyError. This behaviour can be
-        #    overriden by setting the ignore_offset_discrepancy option to True.
+        #    overridden by setting the ignore_offset_discrepancy option to True.
         #    Users can force the use of the HEADER values for the data lookup by
         #    setting the use_header_offsets option to True.
         fcs_version = self.header['version']
@@ -448,7 +448,7 @@ class FlowData(object):
                     stop
                 )
 
-        else:  # non standard bit width...  Does this happen?
+        else:  # non-standard bit width...  Does this happen?
             warn('Non-standard bit width for data segments')
             return None
 
