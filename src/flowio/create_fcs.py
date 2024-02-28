@@ -190,7 +190,9 @@ def create_fcs(
     if 'datatype' in proc_metadata_dict:
         datatype_value = proc_metadata_dict['datatype']
         if datatype_value != 'F':
-            raise NotImplementedError("Creating FCS files with data type %s is not supported." % datatype_value)
+            raise NotImplementedError(
+                "Creating FCS files with data type %s is not supported." % datatype_value
+            )
 
     for i in range(n_channels):
         chan_num = i + 1  # channel numbers in FCS are indexed at 1

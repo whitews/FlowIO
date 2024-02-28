@@ -422,7 +422,7 @@ class FlowData(object):
                 # ignored using a bit mask. If the PnR value is not a power
                 # of 2, then the next power of 2 shall be used.
                 if any(2 ** bit_width_lut[c] > max_range_lut[c] for
-                       c in bit_width_lut.keys()) :
+                       c in bit_width_lut.keys()):
 
                     amount_data_points = int(num_items / len(max_range_lut))
                     
@@ -433,7 +433,7 @@ class FlowData(object):
                         [mr - 1 for mr in max_range_lut.values()] * amount_data_points
                     )
                     new_tmp = array.array(self.__format_integer(bit_width))
-                    new_tmp.frombytes(bytes(map(lambda a,b: a&b, tmp.tobytes(), bit_mask.tobytes())))
+                    new_tmp.frombytes(bytes(map(lambda a, b: a & b, tmp.tobytes(), bit_mask.tobytes())))
                     tmp = new_tmp
             else:
                 # parameter sizes are different
@@ -464,7 +464,7 @@ class FlowData(object):
         # so fall back to the slower unpack approach
         tuple_tmp = iter_unpack(data_format, self.__read_bytes(offset, start, stop))
         if any(2**bit_width_by_channel[c] > max_range_by_channel[c] for 
-               c in bit_width_by_channel.keys()) :
+               c in bit_width_by_channel.keys()):
             tmp = []
             for data_tuple in tuple_tmp:
                 for channel, max_range in max_range_by_channel.items():
