@@ -11,3 +11,4 @@ on:
 jobs:
   test:
     uses: whitews/FlowIO/.github/workflows/test_base.yml@master
+    secrets: inherit
