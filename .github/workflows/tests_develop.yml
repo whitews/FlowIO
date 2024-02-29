@@ -4,37 +4,10 @@ on:
   push:
     branches:
       - develop
+  pull_request:
+    branches:
+      - develop
 
 jobs:
   test:
-    runs-on: ubuntu-latest
-
-    strategy:
-      matrix:
-        python-version: ["3.7", "3.8", "3.9", "3.10"]
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-        with:
-          ref: 'develop'
-
-      - name: Setup Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: ${{ matrix.python-version }}
-
-      - run: pip install coverage
-      - run: pip install -r requirements_test.txt
-
-      - name: Run tests with coverage
-        run: |
-          coverage run --source flowio --omit="flowio/tests/*" run_tests.py
-          coverage xml
-
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3
-        with:
-          files: coverage.xml
-          fail_ci_if_error: true
-          verbose: true
+    uses: whitews/FlowIO/.github/workflows/test_base.yml@develop

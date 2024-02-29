@@ -53,7 +53,7 @@ class FlowDataTestCase(unittest.TestCase):
         self.assertRaises(AttributeError, FlowData, non_file)
 
     def test_write_fcs(self):
-        file_name = 'flowio/tests/flowio_test_write_fcs.fcs'
+        file_name = 'tests/flowio_test_write_fcs.fcs'
         self.flow_data_spill.write_fcs(file_name)
 
         fcs_export = FlowData(file_name)

@@ -145,11 +145,6 @@ def create_fcs(
 
     n_points = len(event_data)
 
-    if n_points == 0:
-        raise ValueError(
-            "'event_data' array provided was empty"
-        )
-
     if not n_points % n_channels == 0:
         raise ValueError(
             "Number of data points is not a multiple of the number of channels"
@@ -195,7 +190,9 @@ def create_fcs(
     if 'datatype' in proc_metadata_dict:
         datatype_value = proc_metadata_dict['datatype']
         if datatype_value != 'F':
-            raise NotImplementedError("Creating FCS files with data type %s is not supported." % datatype_value)
+            raise NotImplementedError(
+                "Creating FCS files with data type %s is not supported." % datatype_value
+            )
 
     for i in range(n_channels):
         chan_num = i + 1  # channel numbers in FCS are indexed at 1

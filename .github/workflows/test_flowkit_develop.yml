@@ -11,7 +11,7 @@ jobs:
 
     strategy:
       matrix:
-        python-version: ["3.7", "3.8", "3.9", "3.10"]
+        python-version: ["3.10"]
 
     steps:
       - name: Setup Python
@@ -20,13 +20,13 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Checkout FlowIO
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           ref: develop
           path: flowio
 
       - name: Checkout FlowKit (develop)
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: whitews/FlowKit
           ref: develop

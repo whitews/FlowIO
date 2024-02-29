@@ -1,4 +1,4 @@
 import unittest
 
 
-unittest.main('flowio.tests')
+unittest.main('tests')

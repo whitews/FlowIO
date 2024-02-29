@@ -1,6 +1,7 @@
 from .flowdata import FlowData
 from .exceptions import MultipleDataSetsError
 
+
 def read_multiple_data_sets(
     filename_or_handle,
     ignore_offset_error=False,

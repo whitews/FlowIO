@@ -1,0 +1,38 @@
+[project]
+name = "FlowIO"
+dynamic = ["version"]
+description = 'FlowIO is a Python library for reading / writing Flow Cytometry Standard (FCS) files'
+readme = "README.md"
+license = {file = "LICENSE"}
+authors = [
+  {name = "Scott White", email = "whitews@gmail.com" }
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "License :: OSI Approved :: BSD License",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.7"
+]
+
+[tool.setuptools.dynamic]
+version = {attr = "flowio.__version__"}
+
+[project.optional-dependencies]
+test = [
+    "numpy>=1.17",
+]
+
+[project.urls]
+Homepage = "https://github.com/whitews/flowio"
+Documentation = "https://flowio.readthedocs.io/en/latest/"
+Repository = "https://github.com/whitews/flowio"
+Issues = "https://github.com/whitews/FlowIO/issues"
+Changelog = "https://github.com/whitews/FlowIO/releases"
+
+[build-system]
+requires = ['setuptools>=61.0']
+build-backend   = 'setuptools.build_meta'

@@ -300,6 +300,7 @@ class CreateFCSTestCase(unittest.TestCase):
                     fh,
                     event_data,
                     channel_names=pnn_labels,
+                    opt_channel_names=None,
                     metadata_dict=metadata_dict
                 )
 
@@ -376,3 +377,28 @@ class CreateFCSTestCase(unittest.TestCase):
         os.unlink(export_file_path)
 
         self.assertEqual(flow_data.events[0], exported_flow_data.events[0])
+
+    def test_create_and_read_empty_fcs(self):
+        event_data = []
+        pnn_labels = [v["PnN"] for k, v in self.flow_data.channels.items()]
+        pns_labels = [v["PnS"] for k, v in self.flow_data.channels.items()]
+
+        metadata_dict = {"p9g": "2"}
+
+        export_file_path = "examples/fcs_files/test_fcs_export_empty.fcs"
+        with open(export_file_path, "wb") as export_file:
+            create_fcs(
+                export_file,
+                event_data,
+                channel_names=pnn_labels,
+                opt_channel_names=pns_labels,
+                metadata_dict=metadata_dict,
+            )
+
+        exported_flow_data = FlowData(export_file_path)
+        os.unlink(export_file_path)
+
+        self.assertIsInstance(exported_flow_data, FlowData)
+        self.assertEqual(len(exported_flow_data.events), 0)
+        self.assertEqual(exported_flow_data.channels, self.flow_data.channels)
+        self.assertEqual(exported_flow_data.text["p9g"], "2")

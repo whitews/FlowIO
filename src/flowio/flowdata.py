@@ -137,7 +137,7 @@ class FlowData(object):
         #    For 2.0 files we will check only the HEADER for the values.
         #    For 3.0 & 3.1 We will check both & ensure they agree. If a discrepancy
         #    is found, raise a DataOffsetDiscrepancyError. This behaviour can be
-        #    overriden by setting the ignore_offset_discrepancy option to True.
+        #    overridden by setting the ignore_offset_discrepancy option to True.
         #    Users can force the use of the HEADER values for the data lookup by
         #    setting the use_header_offsets option to True.
         fcs_version = self.header['version']
@@ -422,7 +422,7 @@ class FlowData(object):
                 # ignored using a bit mask. If the PnR value is not a power
                 # of 2, then the next power of 2 shall be used.
                 if any(2 ** bit_width_lut[c] > max_range_lut[c] for
-                       c in bit_width_lut.keys()) :
+                       c in bit_width_lut.keys()):
 
                     amount_data_points = int(num_items / len(max_range_lut))
                     
@@ -433,7 +433,7 @@ class FlowData(object):
                         [mr - 1 for mr in max_range_lut.values()] * amount_data_points
                     )
                     new_tmp = array.array(self.__format_integer(bit_width))
-                    new_tmp.frombytes(bytes(map(lambda a,b: a&b, tmp.tobytes(), bit_mask.tobytes())))
+                    new_tmp.frombytes(bytes(map(lambda a, b: a & b, tmp.tobytes(), bit_mask.tobytes())))
                     tmp = new_tmp
             else:
                 # parameter sizes are different
@@ -448,7 +448,7 @@ class FlowData(object):
                     stop
                 )
 
-        else:  # non standard bit width...  Does this happen?
+        else:  # non-standard bit width...  Does this happen?
             warn('Non-standard bit width for data segments')
             return None
 
@@ -464,7 +464,7 @@ class FlowData(object):
         # so fall back to the slower unpack approach
         tuple_tmp = iter_unpack(data_format, self.__read_bytes(offset, start, stop))
         if any(2**bit_width_by_channel[c] > max_range_by_channel[c] for 
-               c in bit_width_by_channel.keys()) :
+               c in bit_width_by_channel.keys()):
             tmp = []
             for data_tuple in tuple_tmp:
                 for channel, max_range in max_range_by_channel.items():
