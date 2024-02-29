@@ -1,2 +1,1 @@
 include LICENSE
-prune flowio/tests/
