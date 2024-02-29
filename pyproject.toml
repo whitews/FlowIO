@@ -1,3 +1,8 @@
 [build-system]
 requires = ['setuptools>=61.0']
 build-backend   = 'setuptools.build_meta'
+
+[project.optional-dependencies]
+test = [
+    "numpy>=1.17",
+]
