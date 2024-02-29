@@ -23,8 +23,7 @@ jobs:
       - name: Install
         run: |
           pip install coverage
-          pip install -r requirements_test.txt
-          pip install -e .
+          pip install -e .[test]
 
       - name: Run tests with coverage
         run: |
@@ -32,7 +31,7 @@ jobs:
           coverage xml
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v4
         with:
           files: coverage.xml
           fail_ci_if_error: true
