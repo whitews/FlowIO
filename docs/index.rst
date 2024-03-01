@@ -16,15 +16,14 @@ FlowIO Documentation
     :target: https://pypi.org/project/flowio/
 
 FlowIO is a Python library for reading / writing Flow Cytometry Standard (FCS)
-files and has zero external dependencies. FlowIO is compatible with Python 3.7+
-(FlowIO v0.9.9 was the last release supporting Python 2).
+files, with zero external dependencies and is compatible with Python 3.7+.
 
 FlowIO retrieves event data exactly as it is encoded in the FCS file: as a
 1-dimensional list without separating the events into channels or performing
-any preprocessing (e.g. applying gain). However, all the metadata stored in the
-FCS file is available as a dictionary via the 'text' attribute. Basic attributes
-are also available for commonly accessed properties. For example, the channel
-count can be used to easily convert the event data to a multi-column NumPy array:
+any preprocessing (e.g. applying gain). Metadata stored in the FCS file is
+available as a dictionary via the 'text' attribute. Basic attributes are also
+available for commonly accessed properties. For example, the channel count
+can be used to easily convert the event data to a multi-column NumPy array:
 
 .. code-block:: python
 
@@ -60,7 +59,7 @@ Or, if you prefer, you can install from the GitHub source:
 
     git clone https://github.com/whitews/flowio
     cd flowio
-    python setup.py install
+    pip install .
 
 ----
 
