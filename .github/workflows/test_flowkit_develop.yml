@@ -35,9 +35,9 @@ jobs:
       - name: Install FlowKit
         working-directory: flowkit
         run: |
+          pip install --upgrade pip
           pip install .
           pip install ../flowio
-          pip freeze | grep -i flowio
 
       - name: Run FlowKit tests
         working-directory: flowkit
