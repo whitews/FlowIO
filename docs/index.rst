@@ -15,6 +15,9 @@ FlowIO Documentation
 .. image:: https://img.shields.io/pypi/pyversions/flowio.svg
     :target: https://pypi.org/project/flowio/
 
+.. image:: https://img.shields.io/pypi/dm/flowio
+   :alt: PyPI - Downloads
+
 FlowIO is a Python library for reading / writing Flow Cytometry Standard (FCS)
 files, with zero external dependencies and is compatible with Python 3.7+.
 
@@ -38,28 +41,28 @@ FlowJo 10 support, see the related FlowKit_ project.
 
 .. _FlowKit: https://github.com/whitews/FlowKit
 
-Changelogs
-__________
-
-`Changelogs for versions are available here <https://github.com/whitews/FlowIO/releases>`_
-
 Installation
 ------------
 
 The recommended way to install FlowIO is via the `pip` command:
 
-.. code-block:: python
+.. code-block::
 
     pip install flowio
 
 
 Or, if you prefer, you can install from the GitHub source:
 
-.. code-block:: python
+.. code-block::
 
     git clone https://github.com/whitews/flowio
     cd flowio
     pip install .
+
+Changelogs
+__________
+
+`Changelogs for versions are available here <https://github.com/whitews/FlowIO/releases>`_
 
 ----
 
