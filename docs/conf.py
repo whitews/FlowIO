@@ -10,9 +10,9 @@ from unittest.mock import MagicMock
 
 on_rtd = os.environ.get('READTHEDOCS') == 'True'
 if on_rtd:
-    sys.path.insert(0, os.path.abspath('..'))
+    sys.path.insert(0, os.path.abspath('../src'))
 else:
-    sys.path.insert(0, os.path.abspath('..'))
+    sys.path.insert(0, os.path.abspath('../src'))
 
 
 class Mock(MagicMock):
@@ -71,10 +71,10 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 html_theme = 'sphinx_rtd_theme'
 
 html_theme_options = {
-    # 'logo': 'flowutils.png',
-    'github_user': 'whitews',
-    'github_repo': 'flowio',
-    'github_banner': True
+    # 'logo': 'logo.png',
+    # 'github_user': 'whitews',
+    # 'github_repo': 'flowio',
+    # 'github_banner': True
 }
 
 # Add any paths that contain custom static files (such as style sheets) here,
