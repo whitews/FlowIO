@@ -7,6 +7,7 @@ import re
 from functools import reduce
 from .create_fcs import create_fcs
 from .exceptions import FCSParsingError, DataOffsetDiscrepancyError, MultipleDataSetsError
+from pathlib import Path
 
 try:
     # noinspection PyUnresolvedReferences, PyUnboundLocalVariable
@@ -78,17 +79,17 @@ class FlowData(object):
             only_text=False,
             nextdata_offset=None,
     ):
-        if isinstance(filename_or_handle, basestring):
+        if isinstance(filename_or_handle, (str, Path)):
             self._fh = open(str(filename_or_handle), 'rb')
         else:
             self._fh = filename_or_handle
 
-        current_offset = nextdata_offset if nextdata_offset else 0
+        current_offset = nextdata_offset or 0
 
         self._ignore_offset = ignore_offset_error
 
         try:
-            unused_path, self.name = os.path.split(self._fh.name)
+            self.name = Path(self._fh.name).name
         except (AttributeError, TypeError):
             self.name = 'InMemoryFile'
 
