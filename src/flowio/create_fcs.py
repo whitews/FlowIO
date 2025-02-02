@@ -345,8 +345,10 @@ def create_fcs(
     # Write out the entire text section (already UTF-8 encoded)
     file_handle.write(text_string)
 
-    # And now our data!
-    float_array = array('f', event_data)
+    # And now write our data to file, convert data if necessary
+    float_array = event_data
+    if not isinstance(event_data, array) or not event_data.typecode == 'f':
+        float_array = array('f', event_data)
     float_array.tofile(file_handle)
 
     return file_handle
