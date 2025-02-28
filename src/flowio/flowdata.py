@@ -1,5 +1,6 @@
 import array
 from operator import and_
+from pathlib import Path
 from struct import calcsize, iter_unpack
 from warnings import warn
 import os
@@ -78,19 +79,35 @@ class FlowData(object):
             only_text=False,
             nextdata_offset=None,
     ):
-        if isinstance(filename_or_handle, basestring):
+        # Determine input type and its name.
+        # Some file handles may not have a file name, they
+        # are "in memory" files.
+        self.name = None
+        if isinstance(filename_or_handle, str):
+            # Received a string for the file path, and the name
+            # attribute from the resulting file handle is a full
+            # path, so strip out just the file name
             self._fh = open(str(filename_or_handle), 'rb')
+            self.name = os.path.basename(self._fh.name)
+        elif isinstance(filename_or_handle, Path):
+            # Received a Path object. These are guaranteed to
+            # have a 'name' attribute and that is the base name.
+            self._fh = open(str(filename_or_handle), 'rb')
+            self.name = filename_or_handle.name
         else:
+            # Not a string or Path object, may be an object
+            # from the 'io' module. If so, not all have a 'name'
+            # attribute (e.g. StringIO), so may be in memory.
             self._fh = filename_or_handle
+
+            if hasattr(filename_or_handle, 'name'):
+                self.name = filename_or_handle.name
+            else:
+                self.name = "InMemoryFile"
 
         current_offset = nextdata_offset if nextdata_offset else 0
 
         self._ignore_offset = ignore_offset_error
-
-        try:
-            unused_path, self.name = os.path.split(self._fh.name)
-        except (AttributeError, TypeError):
-            self.name = 'InMemoryFile'
 
         # Get actual file size for sanity check of data section
         self._fh.seek(0, os.SEEK_END)

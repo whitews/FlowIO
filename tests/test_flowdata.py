@@ -3,6 +3,7 @@ import unittest
 import os
 import io
 import tempfile
+from pathlib import Path
 from flowio import FlowData
 from flowio.exceptions import DataOffsetDiscrepancyError
 
@@ -47,6 +48,11 @@ class FlowDataTestCase(unittest.TestCase):
             tmp_file.seek(0)
             out_data = FlowData(tmp_file)
         self.assertIsInstance(out_data, FlowData)
+
+    def test_load_path_object(self):
+        fcs_path_object = Path('examples/fcs_files/3FITC_4PE_004.fcs')
+        fd = FlowData(fcs_path_object)
+        self.assertIsInstance(fd, FlowData)
 
     def test_load_non_file_input(self):
         non_file = object()
