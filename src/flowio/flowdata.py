@@ -135,10 +135,12 @@ class FlowData(object):
 
         # parse analysis
         try:
+            # noinspection SpellCheckingInspection
             a_start = int(self.text['beginanalysis'])
         except KeyError:
             a_start = self.header['analysis_start']
         try:
+            # noinspection SpellCheckingInspection
             a_stop = int(self.text['endanalysis'])
         except KeyError:
             a_stop = self.header['analysis_stop']
@@ -180,7 +182,9 @@ class FlowData(object):
                 data_stop = header_data_stop
             else:
                 # use TEXT section
+                # noinspection SpellCheckingInspection
                 data_start = int(self.text['begindata'])
+                # noinspection SpellCheckingInspection
                 data_stop = int(self.text['enddata'])
 
                 # check if different from HEADER values & not due to large file
@@ -325,11 +329,13 @@ class FlowData(object):
                 "FCS data stored as type \'%s\' is unsupported" % mode
             )
 
+        # noinspection SpellCheckingInspection
         if text['byteord'] == '1,2,3,4' or text['byteord'] == '1,2':
             order = '<'
         elif text['byteord'] == '4,3,2,1' or text['byteord'] == '2,1':
             order = '>'
         else:
+            # noinspection SpellCheckingInspection
             warn("unsupported byte order %s , using default @" % text['byteord'])
             order = '@'
             # from here on out we assume mode "l" (list)
@@ -542,7 +548,7 @@ class FlowData(object):
                 "Invalid integer bit size (%d) for event data. Compatible sizes are 8, 16, & 32." % b
             )
 
-    def _parse_channels(self):
+    def __extract_channel_metadata(self):
         """
         Returns a dictionary of channels, with key as channel number
         and value is a dictionary of the PnN and PnS text
