@@ -78,6 +78,7 @@ class FlowData(object):
             use_header_offsets=False,
             only_text=False,
             nextdata_offset=None,
+            null_channel_list=None
     ):
         # Determine input type and its name.
         # Some file handles may not have a file name, they
@@ -229,17 +230,63 @@ class FlowData(object):
             self._fh.close()
             raise FCSParsingError("FCS file indicates data section greater than file size")
 
+        # Extract channel metadata from the text data.
+        # Need this for pre-processing the event data.
+        self.channels = self.__extract_channel_metadata()
+
+        # Setup variables we'll need for storing various channel related metadata
+        self.pnn_labels = list()
+        self.pns_labels = list()
+        self.pnr_values = list()
+        self.fluoro_indices = list()
+        self.scatter_indices = list()
+        self.time_index = None
+
+        # Ensure null channels is a list for checking later
+        if null_channel_list is None:
+            self.null_channels = []
+        else:
+            self.null_channels = null_channel_list
+
+        for n in sorted([int(k) for k in self.channels.keys()]):
+            channel_dict = self.channels[n]
+
+            channel_label = channel_dict['PnN']
+            self.pnn_labels.append(channel_label)
+            self.pns_labels.append(channel_dict['PnS'])
+            self.pnr_values.append(channel_dict['PnR'])
+
+            # Determine fluoro vs scatter vs time channels
+            # Null channels are excluded from any category.
+            # NOTE: We save the indices here, not the channel numbers.
+            if channel_label in self.null_channels:
+                pass
+            elif channel_label.lower()[:4] not in ['fsc-', 'ssc-', 'time']:
+                self.fluoro_indices.append(n - 1)
+            elif channel_label.lower()[:4] in ['fsc-', 'ssc-']:
+                self.scatter_indices.append(n - 1)
+            elif channel_label.lower() == 'time':
+                self.time_index = n - 1
+
+                # Note: The time channel is scaled by the timestep (if present),
+                # but should not be scaled by any gain value present in PnG.
+                # It seems common for cytometers to include a gain value for the
+                # time channel that matches either the fluoro channels or the
+                # timestep keyword value. Not sure why they do this, but it
+                # makes no sense to have an amplifier gain on the time data.
+                # Here, we set any time gain to 1.0.
+                channel_dict['PnG'] = 1.0
+
         if only_text:
             self.events = None
         else:
+            # Parse DATA segment (returns a flat list of event data)
             self.events = self.__parse_data(
                 current_offset,
                 data_start,
                 data_stop,
                 self.text
             )
-
-        self.channels = self._parse_channels()
 
         self._fh.close()
 
@@ -462,6 +509,8 @@ class FlowData(object):
                 # parameter sizes are different
                 # e.g. 8, 8, 16, 8, 32 ...
                 # can't use array for heterogeneous bit widths
+                # TODO: Now that we have NumPy as a dependency, investigate whether
+                #       using NumPy arrays can speed this up.
                 tmp = self.__extract_var_length_int(
                     bit_width_lut,
                     max_range_lut,
@@ -554,24 +603,66 @@ class FlowData(object):
         and value is a dictionary of the PnN and PnS text
         """
         channels = dict()
+
+        # Find the required PnN values in the metadata so we know how many channels
+        # there are in the FCS file.
         regex_pnn = re.compile(r"^p(\d+)n$", re.IGNORECASE)
 
+        # Search through all metadata keys once to find the PnN values
         for i in self.text.keys():
             match = regex_pnn.match(i)
             if not match:
                 continue
 
-            channel_num = match.groups()[0]
+            channel_num = int(match.groups()[0])
             channels[channel_num] = dict()
 
             channels[channel_num]['PnN'] = self.text[match.group()]
 
-            # now check for PnS field, which is optional so may not exist
-            regex_pns = re.compile("^p%ss$" % channel_num, re.IGNORECASE)
-            for j in self.text.keys():
-                match = regex_pns.match(j)
-                if match:
-                    channels[channel_num]['PnS'] = self.text[match.group()]
+
+        # Now iterate through the known channels to find the fields:
+        #     PnE: amplification type for log/lin scale (required)
+        #     PnG: channel gain (optional)
+        #     PnR: maximum data range (required)
+        #     PnS: alternate channel labels (optional)
+        for chan_num, chan_dict in channels.items():
+            # PnE specifies whether the parameter data is stored in on linear or log scale
+            # and includes 2 values: (f1, f2)
+            # where:
+            #     f1 is the number of log decades (valid values are f1 >= 0)
+            #     f2 is the value to use for log(0) (valid values are f2 >= 0)
+            # Note for log scale, both values must be > 0
+            # linear = (0, 0)
+            # log    = (f1 > 0, f2 > 0)
+            if 'p%de' % chan_num in self.text:
+                (decades, log0) = [
+                    float(x) for x in self.text['p%de' % chan_num].split(',')
+                ]
+                if log0 == 0 and decades != 0:
+                    log0 = 1.0  # FCS std states to use 1.0 for invalid 0 value
+
+                chan_dict['PnE'] = (decades, log0)
+            else:
+                # PnE is required so should be there, but if not
+                # set to linear
+                chan_dict['PnE'] = (0.0, 0.0)
+
+            # PnG is optional, value is a float
+            if 'p%dg' % chan_num in self.text:
+                chan_dict['PnG'] = float(self.text['p%dg' % chan_num])
+            else:
+                # assumed 1.0 if absent
+                chan_dict['PnG'] = 1.0
+
+            # PnR is required
+            chan_dict['PnR'] = float(self.text['p%dr' % chan_num])
+
+            # PnS is optional
+            if 'p%ds' % chan_num in self.text:
+                chan_dict['PnS'] = self.text['p%ds' % chan_num]
+            else:
+                # empty string if not present
+                chan_dict['PnS'] = ''
 
         return channels
 
