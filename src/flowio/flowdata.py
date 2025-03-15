@@ -623,6 +623,13 @@ class FlowData(object):
         #     PnR: maximum data range (required)
         #     PnS: alternate channel labels (optional)
         for chan_num, chan_dict in channels.items():
+            # PnS is optional
+            if 'p%ds' % chan_num in self.text:
+                chan_dict['PnS'] = self.text['p%ds' % chan_num]
+            else:
+                # empty string if not present
+                chan_dict['PnS'] = ''
+
             # PnE specifies whether the parameter data is stored in on linear or log scale
             # and includes 2 values: (f1, f2)
             # where:
@@ -653,13 +660,6 @@ class FlowData(object):
 
             # PnR is required
             chan_dict['PnR'] = float(self.text['p%dr' % chan_num])
-
-            # PnS is optional
-            if 'p%ds' % chan_num in self.text:
-                chan_dict['PnS'] = self.text['p%ds' % chan_num]
-            else:
-                # empty string if not present
-                chan_dict['PnS'] = ''
 
         return channels
 
