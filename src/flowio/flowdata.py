@@ -349,20 +349,13 @@ class FlowData(object):
         if start == stop:
             return {}
         else:
-            num_items = (stop - start + 1)
-            self._fh.seek(offset + start)
-            tmp = array.array('b')
-            tmp.fromfile(self._fh, int(num_items))
-            tmp = tmp.tobytes()
-
-            try:
-                # try UTF-8 first
-                tmp = tmp.decode()
-            except UnicodeDecodeError:
-                # next best guess is Latin-1, if not that either, we throw the exception
-                tmp = tmp.decode("ISO-8859-1")
-
-            return self.__parse_pairs(tmp)
+            # FCS standard states:
+            #    The ANALYSIS segment has the same structure as the TEXT
+            #    segment; i.e., it consists of a series of keyword-value
+            #    pairs. There are no required keywords for the ANALYSIS
+            #    segment.
+            # So we'll use the __parse_text method to parse this section.
+            return self.__parse_text(offset, start, stop)
 
     def __parse_data(self, offset, start, stop, text):
         """
