@@ -4,6 +4,7 @@ import os
 import io
 import tempfile
 from pathlib import Path
+import numpy as np
 from flowio import FlowData
 from flowio.exceptions import DataOffsetDiscrepancyError
 
@@ -34,6 +35,39 @@ class FlowDataTestCase(unittest.TestCase):
 
         self.assertIsNone(flow_data.events)
         self.assertRaises(AttributeError, flow_data.write_fcs, 'delete_this_file.fcs')
+
+    @staticmethod
+    def test_as_array_with_preprocessing():
+        # 'data1.fcs' has some channels with non 1.0 gain and some stored as non-linear
+        # so is a good test for the pre-processing in the FlowData.as_array() method.
+        flow_data = FlowData('examples/fcs_files/data1.fcs')
+        flow_data_npy = flow_data.as_array(preprocess=True)
+
+        truth_npy = np.load('examples/truth/data1_preprocessed.npy')
+
+        np.testing.assert_array_equal(flow_data_npy, truth_npy)
+
+    @staticmethod
+    def test_as_array_with_preprocessing_with_timestep():
+        # '100715.fcs' has a timestep keyword value of 0.08, so can test the
+        # pre-processing of the time channel data.
+        flow_data = FlowData('examples/fcs_files/B01 KC-A-W---91-US.fcs')
+        flow_data_npy = flow_data.as_array(preprocess=True)
+
+        truth_npy = np.load('examples/truth/B01 KC-A-W---91-US_preprocessed_events.npy')
+
+        np.testing.assert_array_equal(flow_data_npy, truth_npy)
+
+    @staticmethod
+    def test_as_array_no_preprocessing():
+        # 'data1.fcs' has some channels with non 1.0 gain and some stored as non-linear
+        # so is a good test for the pre-processing in the FlowData.as_array() method.
+        flow_data = FlowData('examples/fcs_files/data1.fcs')
+        flow_data_npy = flow_data.as_array(preprocess=False)
+
+        truth_npy = np.load('examples/truth/data1_original_events.npy')
+
+        np.testing.assert_array_equal(flow_data_npy, truth_npy)
 
     @staticmethod
     def test_load_fcs_from_memory():
