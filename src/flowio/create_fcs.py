@@ -120,7 +120,7 @@ def create_fcs(
         A proper spillover matrix shall have the first value corresponding to the
         number of compensated fluorescence channels followed by the $PnN names
         which should match the given channel_names argument. All values in the
-        spill text string should be comma delimited with no newline characters.
+        spill text string should be comma-delimited with no newline characters.
 
     :param file_handle: file handle for new FCS file
     :param event_data: list of event data (flattened 1-D list)
@@ -215,6 +215,8 @@ def create_fcs(
                 )
 
         # PnG - gain
+        # For data type 'f', gain values other than 1.0 are allowed,
+        # check the metadata dict first, and set to 1.0 if not found.
         png_key = 'p%dg' % chan_num
         if png_key in proc_metadata_dict:
             png_value = proc_metadata_dict[png_key]
