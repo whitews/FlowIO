@@ -5,6 +5,7 @@ from struct import calcsize, iter_unpack
 from warnings import warn
 import os
 import re
+import numpy as np
 from functools import reduce
 from .create_fcs import create_fcs
 from .exceptions import FCSParsingError, DataOffsetDiscrepancyError, MultipleDataSetsError
@@ -658,6 +659,54 @@ class FlowData(object):
                 chan_dict['PnS'] = ''
 
         return channels
+
+    def as_array(self, preprocess=True):
+        """
+        Retrieve the event data list as a 2-D NumPy array. Pre-processing is
+        applied if requested and includes applying gain, log, and time scaling
+        as necessary.
+
+        :param preprocess: Boolean for whether to apply gain, log, and  time
+            scaling as necessary according the FCS metadata (default is True).
+
+        :return: NumPy array of 2-D event data
+        """
+        # Start processing the event data. Ensure events are double precision
+        # because pre-processing will convert all events (even integer data types)
+        # to floating point. This precision is needed for accurate downstream
+        # analysis (e.g. gating results).
+        tmp_events = np.reshape(
+            np.array(self.events, dtype=np.float64),
+            (-1, self.channel_count)
+        )
+
+        if preprocess:
+            # Event data must be scaled according to channel gain, as well
+            # as corrected for proper lin/log display, and the time channel
+            # scaled by the 'timestep' keyword value (if present).
+            # We'll start with the time channel.
+            if 'timestep' in self.text and self.time_index is not None:
+                time_step = float(self.text['timestep'])
+                tmp_events[:, self.time_index] = tmp_events[:, self.time_index] * time_step
+
+            # Process channels
+            # For channel data stored on logarithmic scale will get converted
+            # to a linear scale. For channel's stored with amplified data, where
+            # gain (PnG) is != 1.0 (or zero, since it's equivalent to no gain).
+            for chan_num, chan_dict in self.channels.items():
+                # Note that keys are channel numbers, not indices
+                chan_idx = chan_num - 1
+                (chan_decades, chan_log0) = chan_dict['PnE']
+                chan_range = chan_dict['PnR']
+                chan_gain = chan_dict['PnG']
+
+                if chan_decades > 0:
+                    tmp_events[:, chan_idx] = (10 ** (chan_decades * tmp_events[:, chan_idx] / chan_range)) * chan_log0
+
+                if chan_gain != 1.0 and chan_gain != 0:
+                    tmp_events[:, chan_idx] = tmp_events[:, chan_idx] / chan_gain
+
+        return tmp_events
 
     def write_fcs(self, filename, metadata=None):
         """
