@@ -400,5 +400,6 @@ class CreateFCSTestCase(unittest.TestCase):
 
         self.assertIsInstance(exported_flow_data, FlowData)
         self.assertEqual(len(exported_flow_data.events), 0)
-        self.assertEqual(exported_flow_data.channels, self.flow_data.channels)
+        self.assertEqual(exported_flow_data.pnn_labels, self.flow_data.pnn_labels)
+        self.assertEqual(exported_flow_data.pns_labels, self.flow_data.pns_labels)
         self.assertEqual(exported_flow_data.text["p9g"], "2")
