@@ -119,6 +119,9 @@ class FlowData(object):
         # parse headers
         self.header = self.__parse_header(current_offset)
 
+        # Get FCS version from the header for convenient lookup
+        self.version = self.header['version']
+
         # parse text
         self.text = self.__parse_text(
             current_offset,
