@@ -715,7 +715,10 @@ class FlowData(object):
         By default, the output FCS file will include the $cyt, $date, and $spill
         keywords (and values) from the FlowData instance. To exclude these keys,
         specify a custom `metadata` dictionary (including an empty dictionary for
-        the bare minimum metadata).
+        the bare minimum metadata). Note: Any critical keywords related to the
+        interpretation of the event data are defined and set internally,
+        overriding those in the provided `metadata` dictionary. These keywords
+        include: PnB, PnE, and PnG.
 
         :param filename: name of exported FCS file
         :param metadata: an optional dictionary for adding metadata keywords/values
@@ -742,21 +745,23 @@ class FlowData(object):
             if 'cyt' in self.text:
                 metadata['cyt'] = self.text['cyt']
 
-        pnn_labels = [''] * len(self.channels)
-        pns_labels = [''] * len(self.channels)
+            # TODO: we need to verify if other PnX sets
+            #  need to be included (esp. PnG) since this
+            #  method will write out the unprocessed events,
+            #  these values may need to be preserved.
 
-        for k in self.channels:
-            pnn_labels[int(k) - 1] = self.channels[k]['PnN']
-
-            if 'PnS' in self.channels[k]:
-                pns_labels[int(k) - 1] = self.channels[k]['PnS']
+            # copy PnR values from file
+            for i, value in enumerate(self.pnr_values):
+                # Use channel numbers and not indices
+                chan_num = i + 1
+                metadata['P%dR' % chan_num] = str(value)
 
         fh = open(filename, 'wb')
         fh = create_fcs(
             fh,
             self.events,
-            pnn_labels,
-            opt_channel_names=pns_labels,
+            self.pnn_labels,
+            opt_channel_names=self.pns_labels,
             metadata_dict=metadata
         )
         fh.close()
