@@ -367,6 +367,11 @@ class FlowData(object):
         """
         data_type = text['datatype']
         mode = text['mode']
+
+        # FlowData only supports list mode data ('l')
+        # Values 'c' & 'u' are deprecated in FCS 3.1 and
+        # correspond to correlated multivariate histogram ('c')
+        # and uncorrelated univariate histogram ('u') data.
         if mode == 'c' or mode == 'u':
             self._fh.close()
             raise NotImplementedError(
