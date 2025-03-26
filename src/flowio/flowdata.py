@@ -694,7 +694,13 @@ class FlowData(object):
             # scaled by the 'timestep' keyword value (if present).
             # We'll start with the time channel.
             if 'timestep' in self.text and self.time_index is not None:
-                time_step = float(self.text['timestep'])
+                try:
+                    time_step = float(self.text['timestep'])
+                except ValueError:
+                    if self.text['timestep'] == ' ':
+                        time_step = 1.0
+                    else:
+                        raise ValueError(f"Timestep value should be a float value but found the value '{self.text['timestep']}'")
                 tmp_events[:, self.time_index] = tmp_events[:, self.time_index] * time_step
 
             # Process channels
