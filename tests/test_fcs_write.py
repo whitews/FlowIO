@@ -9,14 +9,14 @@ from flowio.exceptions import PnEWarning
 
 class CreateFCSTestCase(unittest.TestCase):
     def setUp(self):
-        self.flow_data = FlowData('examples/fcs_files/100715.fcs')
+        self.flow_data = FlowData('data/fcs_files/100715.fcs')
 
     def test_create_fcs(self):
         event_data = self.flow_data.events
         channel_names = self.flow_data.channels
         pnn_labels = [v['pnn'] for k, v in channel_names.items()]
 
-        export_file_path = "examples/fcs_files/test_fcs_export.fcs"
+        export_file_path = "data/fcs_files/test_fcs_export.fcs"
         fh = open(export_file_path, 'wb')
         create_fcs(fh, event_data, channel_names=pnn_labels)
         fh.close()
@@ -90,7 +90,7 @@ class CreateFCSTestCase(unittest.TestCase):
 
         pnn_labels = ['FSC-A']
 
-        export_file_path = "examples/fcs_files/test_fcs_export_data_offsets.fcs"
+        export_file_path = "data/fcs_files/test_fcs_export_data_offsets.fcs"
 
         # File 01
         fh = open(export_file_path, 'wb')
@@ -161,7 +161,7 @@ class CreateFCSTestCase(unittest.TestCase):
             'FLR2-A'
         ]
 
-        export_file_path = "examples/fcs_files/test_large_fcs_export.fcs"
+        export_file_path = "data/fcs_files/test_large_fcs_export.fcs"
         fh = open(export_file_path, 'wb')
         create_fcs(fh, event_data, channel_names=pnn_labels)
         fh.close()
@@ -180,7 +180,7 @@ class CreateFCSTestCase(unittest.TestCase):
         pnn_labels = [v['pnn'] for k, v in channel_names.items()]
         pns_labels = [v['pns'] for k, v in channel_names.items()]
 
-        export_file_path = "examples/fcs_files/test_fcs_export.fcs"
+        export_file_path = "data/fcs_files/test_fcs_export.fcs"
         fh = open(export_file_path, 'wb')
         create_fcs(fh, event_data, channel_names=pnn_labels, opt_channel_names=pns_labels)
         fh.close()
@@ -214,7 +214,7 @@ class CreateFCSTestCase(unittest.TestCase):
         metadata_dict['$VOL'] = '120'
         metadata_dict['$P1CALIBRATION'] = '1.234,MESF'
 
-        export_file_path = "examples/fcs_files/test_fcs_export.fcs"
+        export_file_path = "data/fcs_files/test_fcs_export.fcs"
         fh = open(export_file_path, 'wb')
         create_fcs(fh, event_data, channel_names=pnn_labels, metadata_dict=metadata_dict)
         fh.close()
@@ -243,7 +243,7 @@ class CreateFCSTestCase(unittest.TestCase):
             'cyt': 'Main Aria (FACSAria)'
         }
 
-        export_file_path = "examples/fcs_files/test_fcs_export.fcs"
+        export_file_path = "data/fcs_files/test_fcs_export.fcs"
         fh = open(export_file_path, 'wb')
         create_fcs(fh, event_data, channel_names=pnn_labels, metadata_dict=metadata_dict)
         fh.close()
@@ -270,7 +270,7 @@ class CreateFCSTestCase(unittest.TestCase):
             'p11g': '2'
         }
 
-        export_file_path = "examples/fcs_files/test_fcs_export.fcs"
+        export_file_path = "data/fcs_files/test_fcs_export.fcs"
         fh = open(export_file_path, 'wb')
         create_fcs(fh, event_data, channel_names=pnn_labels, metadata_dict=metadata_dict)
         fh.close()
@@ -289,7 +289,7 @@ class CreateFCSTestCase(unittest.TestCase):
             'p9e': '4,1'
         }
 
-        export_file_path = "examples/fcs_files/test_fcs_export.fcs"
+        export_file_path = "data/fcs_files/test_fcs_export.fcs"
 
         with open(export_file_path, 'wb') as fh:
             with warnings.catch_warnings():
@@ -320,7 +320,7 @@ class CreateFCSTestCase(unittest.TestCase):
             'p9r': '2048'
         }
 
-        export_file_path = "examples/fcs_files/test_fcs_export.fcs"
+        export_file_path = "data/fcs_files/test_fcs_export.fcs"
         fh = open(export_file_path, 'wb')
 
         create_fcs(fh, event_data, channel_names=pnn_labels, metadata_dict=metadata_dict)
@@ -342,7 +342,7 @@ class CreateFCSTestCase(unittest.TestCase):
             'p9n': 'FLR1-A'
         }
 
-        export_file_path = "examples/fcs_files/test_fcs_export.fcs"
+        export_file_path = "data/fcs_files/test_fcs_export.fcs"
         fh = open(export_file_path, 'wb')
         create_fcs(fh, event_data, channel_names=pnn_labels, metadata_dict=metadata_dict)
         fh.close()
@@ -356,8 +356,8 @@ class CreateFCSTestCase(unittest.TestCase):
         self.assertEqual(p9n_tag_value, p9n_tag_truth)
 
     def test_create_fcs_with_2byte_char(self):
-        fcs_path = "examples/fcs_files/data1.fcs"
-        export_file_path = "examples/fcs_files/test_fcs_export.fcs"
+        fcs_path = "data/fcs_files/data1.fcs"
+        export_file_path = "data/fcs_files/test_fcs_export.fcs"
 
         flow_data = FlowData(fcs_path)
         pnn_labels = [v['pnn'] for k, v in flow_data.channels.items()]
@@ -385,7 +385,7 @@ class CreateFCSTestCase(unittest.TestCase):
 
         metadata_dict = {"p9g": "2"}
 
-        export_file_path = "examples/fcs_files/test_fcs_export_empty.fcs"
+        export_file_path = "data/fcs_files/test_fcs_export_empty.fcs"
         with open(export_file_path, "wb") as export_file:
             create_fcs(
                 export_file,

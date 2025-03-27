@@ -10,7 +10,7 @@ class FlowDataLMDTestCase(unittest.TestCase):
         with warnings.catch_warnings():
             warnings.simplefilter('ignore')
             self.flow_data, self.fcs3_data = read_multiple_data_sets(
-                'examples/fcs_files/coulter.lmd',
+                'data/fcs_files/coulter.lmd',
                 ignore_offset_error=True
             )
         
@@ -27,7 +27,7 @@ class FlowDataLMDTestCase(unittest.TestCase):
         with self.assertRaises(FCSParsingError):
             with warnings.catch_warnings():
                 warnings.simplefilter('ignore')
-                FlowData('examples/fcs_files/coulter.lmd', nextdata_offset=0)
+                FlowData('data/fcs_files/coulter.lmd', nextdata_offset=0)
 
     def test_right_integer_reading(self):
         self.assertEqual(

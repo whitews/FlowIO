@@ -12,8 +12,8 @@ from flowio.exceptions import DataOffsetDiscrepancyError
 class FlowDataTestCase(unittest.TestCase):
     def setUp(self):
         self.maxDiff = None
-        self.flow_data = FlowData('examples/fcs_files/3FITC_4PE_004.fcs')
-        self.flow_data_spill = FlowData('examples/fcs_files/100715.fcs')
+        self.flow_data = FlowData('data/fcs_files/3FITC_4PE_004.fcs')
+        self.flow_data_spill = FlowData('data/fcs_files/100715.fcs')
 
     def test_string_representation(self):
         self.assertEqual(
@@ -31,7 +31,7 @@ class FlowDataTestCase(unittest.TestCase):
         self.assertEqual(self.flow_data.text['cyt'], 'FACScan')
 
     def test_load_only_text(self):
-        flow_data = FlowData('examples/fcs_files/3FITC_4PE_004.fcs', only_text=True)
+        flow_data = FlowData('data/fcs_files/3FITC_4PE_004.fcs', only_text=True)
 
         self.assertIsNone(flow_data.events)
         self.assertRaises(AttributeError, flow_data.write_fcs, 'delete_this_file.fcs')
@@ -40,10 +40,10 @@ class FlowDataTestCase(unittest.TestCase):
     def test_as_array_with_preprocessing():
         # 'data1.fcs' has some channels with non 1.0 gain and some stored as non-linear
         # so is a good test for the pre-processing in the FlowData.as_array() method.
-        flow_data = FlowData('examples/fcs_files/data1.fcs')
+        flow_data = FlowData('data/fcs_files/data1.fcs')
         flow_data_npy = flow_data.as_array(preprocess=True)
 
-        truth_npy = np.load('examples/truth/data1_preprocessed.npy')
+        truth_npy = np.load('data/truth/data1_preprocessed.npy')
 
         np.testing.assert_array_equal(flow_data_npy, truth_npy)
 
@@ -51,10 +51,10 @@ class FlowDataTestCase(unittest.TestCase):
     def test_as_array_with_preprocessing_with_timestep():
         # '100715.fcs' has a timestep keyword value of 0.08, so can test the
         # pre-processing of the time channel data.
-        flow_data = FlowData('examples/fcs_files/B01 KC-A-W---91-US.fcs')
+        flow_data = FlowData('data/fcs_files/B01 KC-A-W---91-US.fcs')
         flow_data_npy = flow_data.as_array(preprocess=True)
 
-        truth_npy = np.load('examples/truth/B01 KC-A-W---91-US_preprocessed_events.npy')
+        truth_npy = np.load('data/truth/B01 KC-A-W---91-US_preprocessed_events.npy')
 
         np.testing.assert_array_equal(flow_data_npy, truth_npy)
 
@@ -63,7 +63,7 @@ class FlowDataTestCase(unittest.TestCase):
         # Some FCS files have invalid timestep values of empty strings or
         # whitespace. FlowIO will parse these & assume a timestep of 1.0.
         # This file has a timestep of ' '
-        flow_data = FlowData('examples/fcs_files/empty_timestep/Ki67-117 tube 1.LMD')
+        flow_data = FlowData('data/fcs_files/empty_timestep/Ki67-117 tube 1.LMD')
         time_index = flow_data.time_index
 
         # Get both unprocessed and preprocessed to compare time channel events
@@ -76,29 +76,29 @@ class FlowDataTestCase(unittest.TestCase):
     def test_as_array_no_preprocessing():
         # 'data1.fcs' has some channels with non 1.0 gain and some stored as non-linear
         # so is a good test for the pre-processing in the FlowData.as_array() method.
-        flow_data = FlowData('examples/fcs_files/data1.fcs')
+        flow_data = FlowData('data/fcs_files/data1.fcs')
         flow_data_npy = flow_data.as_array(preprocess=False)
 
-        truth_npy = np.load('examples/truth/data1_original_events.npy')
+        truth_npy = np.load('data/truth/data1_original_events.npy')
 
         np.testing.assert_array_equal(flow_data_npy, truth_npy)
 
     @staticmethod
     def test_load_fcs_from_memory():
-        with open('examples/fcs_files/3FITC_4PE_004.fcs', 'rb') as f:
+        with open('data/fcs_files/3FITC_4PE_004.fcs', 'rb') as f:
             mem_file = io.BytesIO(f.read())
             FlowData(mem_file)
 
     def test_load_temp_file(self):
         with tempfile.TemporaryFile() as tmp_file:
-            with open('examples/fcs_files/3FITC_4PE_004.fcs', 'r+b') as f:
+            with open('data/fcs_files/3FITC_4PE_004.fcs', 'r+b') as f:
                 shutil.copyfileobj(f, tmp_file)
             tmp_file.seek(0)
             out_data = FlowData(tmp_file)
         self.assertIsInstance(out_data, FlowData)
 
     def test_load_path_object(self):
-        fcs_path_object = Path('examples/fcs_files/3FITC_4PE_004.fcs')
+        fcs_path_object = Path('data/fcs_files/3FITC_4PE_004.fcs')
         fd = FlowData(fcs_path_object)
         self.assertIsInstance(fd, FlowData)
 
@@ -143,13 +143,13 @@ class FlowDataTestCase(unittest.TestCase):
         #   0000 0000 1111 1111 1111 1111 1111 1111      16777215 (2 ** 24 - 1)
         #   0000 0000 1110 1111 0110 1111 0101 0010      15691602 (new value)
 
-        fcs_file = "examples/fcs_files/variable_int_example.fcs"
+        fcs_file = "data/fcs_files/variable_int_example.fcs"
         sample = FlowData(fcs_file)
 
         self.assertListEqual(event_values, sample.events)
 
     def test_write_fcs_preserves_channels(self):
-        orig_fd = FlowData('examples/fcs_files/100715.fcs')
+        orig_fd = FlowData('data/fcs_files/100715.fcs')
         expected = orig_fd.channels
 
         with tempfile.NamedTemporaryFile() as tmpfile:
@@ -172,14 +172,14 @@ class FlowDataTestCase(unittest.TestCase):
 
         error: unpack requires a buffer of 277676 bytes
         """
-        flow_data = FlowData('examples/fcs_files/G11.fcs')
+        flow_data = FlowData('data/fcs_files/G11.fcs')
 
         self.assertIsInstance(flow_data, FlowData)
 
     def test_data_start_offset_discrepancy(self):
-        fcs_file = "examples/fcs_files/data_start_offset_discrepancy_example.fcs"
+        fcs_file = "data/fcs_files/data_start_offset_discrepancy_example.fcs"
         self.assertRaises(DataOffsetDiscrepancyError, FlowData, fcs_file)
 
     def test_data_stop_offset_discrepancy(self):
-        fcs_file = "examples/fcs_files/data_stop_offset_discrepancy_example.fcs"
+        fcs_file = "data/fcs_files/data_stop_offset_discrepancy_example.fcs"
         self.assertRaises(DataOffsetDiscrepancyError, FlowData, fcs_file)
