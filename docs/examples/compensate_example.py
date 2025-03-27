@@ -1,7 +1,7 @@
 import flowio
 import flowutils
 
-fd = flowio.FlowData('fcs_files/100715.fcs')
+fd = flowio.FlowData('../../examples/fcs_files/100715.fcs')
 spill, markers = flowutils.compensate.get_spill(fd.text['spill'])
 events = fd.as_array()
 
