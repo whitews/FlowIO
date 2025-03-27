@@ -18,6 +18,8 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
+        run:
+          pip install --upgrade pip
 
       - name: Checkout FlowIO
         uses: actions/checkout@v4
@@ -32,12 +34,15 @@ jobs:
           ref: develop
           path: flowkit
 
+      - name: Install FlowIO
+        working-directory: flowio
+        run: |
+          pip install .
+
       - name: Install FlowKit
         working-directory: flowkit
         run: |
-          pip install --upgrade pip
           pip install .
-          pip install ../flowio
 
       - name: Run FlowKit tests
         working-directory: flowkit
