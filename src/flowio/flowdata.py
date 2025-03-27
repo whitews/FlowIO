@@ -255,10 +255,10 @@ class FlowData(object):
         for n in sorted([int(k) for k in self.channels.keys()]):
             channel_dict = self.channels[n]
 
-            channel_label = channel_dict['PnN']
+            channel_label = channel_dict['pnn']
             self.pnn_labels.append(channel_label)
-            self.pns_labels.append(channel_dict['PnS'])
-            self.pnr_values.append(channel_dict['PnR'])
+            self.pns_labels.append(channel_dict['pns'])
+            self.pnr_values.append(channel_dict['pnr'])
 
             # Determine fluoro vs scatter vs time channels
             # Null channels are excluded from any category.
@@ -279,7 +279,7 @@ class FlowData(object):
                 # timestep keyword value. Not sure why they do this, but it
                 # makes no sense to have an amplifier gain on the time data.
                 # Here, we set any time gain to 1.0.
-                channel_dict['PnG'] = 1.0
+                channel_dict['png'] = 1.0
 
         if only_text:
             self.events = None
@@ -619,7 +619,7 @@ class FlowData(object):
             channel_num = int(match.groups()[0])
             channels[channel_num] = dict()
 
-            channels[channel_num]['PnN'] = self.text[match.group()]
+            channels[channel_num]['pnn'] = self.text[match.group()]
 
 
         # Now iterate through the known channels to find the fields:
@@ -630,10 +630,10 @@ class FlowData(object):
         for chan_num, chan_dict in channels.items():
             # PnS is optional
             if 'p%ds' % chan_num in self.text:
-                chan_dict['PnS'] = self.text['p%ds' % chan_num]
+                chan_dict['pns'] = self.text['p%ds' % chan_num]
             else:
                 # empty string if not present
-                chan_dict['PnS'] = ''
+                chan_dict['pns'] = ''
 
             # PnE specifies whether the parameter data is stored in on linear or log scale
             # and includes 2 values: (f1, f2)
@@ -650,21 +650,21 @@ class FlowData(object):
                 if log0 == 0 and decades != 0:
                     log0 = 1.0  # FCS std states to use 1.0 for invalid 0 value
 
-                chan_dict['PnE'] = (decades, log0)
+                chan_dict['pne'] = (decades, log0)
             else:
                 # PnE is required so should be there, but if not
                 # set to linear
-                chan_dict['PnE'] = (0.0, 0.0)
+                chan_dict['pne'] = (0.0, 0.0)
 
             # PnG is optional, value is a float
             if 'p%dg' % chan_num in self.text:
-                chan_dict['PnG'] = float(self.text['p%dg' % chan_num])
+                chan_dict['png'] = float(self.text['p%dg' % chan_num])
             else:
                 # assumed 1.0 if absent
-                chan_dict['PnG'] = 1.0
+                chan_dict['png'] = 1.0
 
             # PnR is required
-            chan_dict['PnR'] = float(self.text['p%dr' % chan_num])
+            chan_dict['pnr'] = float(self.text['p%dr' % chan_num])
 
         return channels
 
@@ -710,9 +710,9 @@ class FlowData(object):
             for chan_num, chan_dict in self.channels.items():
                 # Note that keys are channel numbers, not indices
                 chan_idx = chan_num - 1
-                (chan_decades, chan_log0) = chan_dict['PnE']
-                chan_range = chan_dict['PnR']
-                chan_gain = chan_dict['PnG']
+                (chan_decades, chan_log0) = chan_dict['pne']
+                chan_range = chan_dict['pnr']
+                chan_gain = chan_dict['png']
 
                 if chan_decades > 0:
                     tmp_events[:, chan_idx] = (10 ** (chan_decades * tmp_events[:, chan_idx] / chan_range)) * chan_log0

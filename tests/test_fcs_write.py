@@ -14,7 +14,7 @@ class CreateFCSTestCase(unittest.TestCase):
     def test_create_fcs(self):
         event_data = self.flow_data.events
         channel_names = self.flow_data.channels
-        pnn_labels = [v['PnN'] for k, v in channel_names.items()]
+        pnn_labels = [v['pnn'] for k, v in channel_names.items()]
 
         export_file_path = "examples/fcs_files/test_fcs_export.fcs"
         fh = open(export_file_path, 'wb')
@@ -177,8 +177,8 @@ class CreateFCSTestCase(unittest.TestCase):
     def test_create_fcs_with_opt_channel_labels(self):
         event_data = self.flow_data.events
         channel_names = self.flow_data.channels
-        pnn_labels = [v['PnN'] for k, v in channel_names.items()]
-        pns_labels = [v['PnS'] for k, v in channel_names.items()]
+        pnn_labels = [v['pnn'] for k, v in channel_names.items()]
+        pns_labels = [v['pns'] for k, v in channel_names.items()]
 
         export_file_path = "examples/fcs_files/test_fcs_export.fcs"
         fh = open(export_file_path, 'wb')
@@ -196,7 +196,7 @@ class CreateFCSTestCase(unittest.TestCase):
     def test_create_fcs_with_std_metadata(self):
         event_data = self.flow_data.events
         channel_names = self.flow_data.channels
-        pnn_labels = [v['PnN'] for k, v in channel_names.items()]
+        pnn_labels = [v['pnn'] for k, v in channel_names.items()]
 
         metadata_dict = {}
 
@@ -236,7 +236,7 @@ class CreateFCSTestCase(unittest.TestCase):
     def test_create_fcs_with_non_std_metadata(self):
         event_data = self.flow_data.events
         channel_names = self.flow_data.channels
-        pnn_labels = [v['PnN'] for k, v in channel_names.items()]
+        pnn_labels = [v['pnn'] for k, v in channel_names.items()]
 
         metadata_dict = {
             'custom_tag': 'added by flowio',
@@ -263,7 +263,7 @@ class CreateFCSTestCase(unittest.TestCase):
     def test_create_fcs_with_png(self):
         event_data = self.flow_data.events
         channel_names = self.flow_data.channels
-        pnn_labels = [v['PnN'] for k, v in channel_names.items()]
+        pnn_labels = [v['pnn'] for k, v in channel_names.items()]
 
         metadata_dict = {
             'p9g': '2',
@@ -283,7 +283,7 @@ class CreateFCSTestCase(unittest.TestCase):
     def test_create_fcs_with_log_pne_warns(self):
         event_data = self.flow_data.events
         channel_names = self.flow_data.channels
-        pnn_labels = [v['PnN'] for k, v in channel_names.items()]
+        pnn_labels = [v['pnn'] for k, v in channel_names.items()]
 
         metadata_dict = {
             'p9e': '4,1'
@@ -314,7 +314,7 @@ class CreateFCSTestCase(unittest.TestCase):
         """
         event_data = self.flow_data.events
         channel_names = self.flow_data.channels
-        pnn_labels = [v['PnN'] for k, v in channel_names.items()]
+        pnn_labels = [v['pnn'] for k, v in channel_names.items()]
 
         metadata_dict = {
             'p9r': '2048'
@@ -335,7 +335,7 @@ class CreateFCSTestCase(unittest.TestCase):
     def test_create_fcs_ignore_extra_pnn(self):
         event_data = self.flow_data.events
         channel_names = self.flow_data.channels
-        pnn_labels = [v['PnN'] for k, v in channel_names.items()]
+        pnn_labels = [v['pnn'] for k, v in channel_names.items()]
 
         # this p9n value should get ignored
         metadata_dict = {
@@ -360,7 +360,7 @@ class CreateFCSTestCase(unittest.TestCase):
         export_file_path = "examples/fcs_files/test_fcs_export.fcs"
 
         flow_data = FlowData(fcs_path)
-        pnn_labels = [v['PnN'] for k, v in flow_data.channels.items()]
+        pnn_labels = [v['pnn'] for k, v in flow_data.channels.items()]
 
         metadata = flow_data.text.copy()
 
@@ -380,8 +380,8 @@ class CreateFCSTestCase(unittest.TestCase):
 
     def test_create_and_read_empty_fcs(self):
         event_data = []
-        pnn_labels = [v["PnN"] for k, v in self.flow_data.channels.items()]
-        pns_labels = [v["PnS"] for k, v in self.flow_data.channels.items()]
+        pnn_labels = [v["pnn"] for k, v in self.flow_data.channels.items()]
+        pns_labels = [v["pns"] for k, v in self.flow_data.channels.items()]
 
         metadata_dict = {"p9g": "2"}
 
