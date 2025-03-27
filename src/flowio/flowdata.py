@@ -697,7 +697,9 @@ class FlowData(object):
                 try:
                     time_step = float(self.text['timestep'])
                 except ValueError:
-                    if self.text['timestep'] == ' ':
+                    # Some FCS files contain an empty string or whitespace values
+                    # for the 'timestep' keyword. In these cases, set to 1.0
+                    if self.text['timestep'].strip() == '':
                         time_step = 1.0
                     else:
                         raise ValueError(f"Timestep value should be a float value but found the value '{self.text['timestep']}'")
