@@ -59,6 +59,20 @@ class FlowDataTestCase(unittest.TestCase):
         np.testing.assert_array_equal(flow_data_npy, truth_npy)
 
     @staticmethod
+    def test_as_array_with_preprocessing_with_empty_timestep():
+        # Some FCS files have invalid timestep values of empty strings or
+        # whitespace. FlowIO will parse these & assume a timestep of 1.0.
+        # This file has a timestep of ' '
+        flow_data = FlowData('examples/fcs_files/empty_timestep/Ki67-117 tube 1.LMD')
+        time_index = flow_data.time_index
+
+        # Get both unprocessed and preprocessed to compare time channel events
+        events_orig = flow_data.as_array(preprocess=False)
+        events_preproc = flow_data.as_array(preprocess=True)
+
+        np.testing.assert_array_equal(events_orig[:, time_index], events_preproc[:, time_index])
+
+    @staticmethod
     def test_as_array_no_preprocessing():
         # 'data1.fcs' has some channels with non 1.0 gain and some stored as non-linear
         # so is a good test for the pre-processing in the FlowData.as_array() method.
