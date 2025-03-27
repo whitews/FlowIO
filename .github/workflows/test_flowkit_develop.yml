@@ -29,6 +29,13 @@ jobs:
           ref: develop
           path: flowio
 
+      - name: Checkout FlowUtils
+        uses: actions/checkout@v4
+        with:
+          repository: whitews/FlowUtils
+          ref: develop
+          path: flowutils
+
       - name: Checkout FlowKit (develop)
         uses: actions/checkout@v4
         with:
@@ -38,6 +45,11 @@ jobs:
 
       - name: Install FlowIO
         working-directory: flowio
+        run: |
+          pip install .
+
+      - name: Install FlowUtils
+        working-directory: flowutils
         run: |
           pip install .
 
