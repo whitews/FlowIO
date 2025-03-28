@@ -165,15 +165,10 @@ class FlowData(object):
         #    overridden by setting the ignore_offset_discrepancy option to True.
         #    Users can force the use of the HEADER values for the data lookup by
         #    setting the use_header_offsets option to True.
-        fcs_version = self.header['version']
-
-        # check if FCS version is supported (3.0, 3.1)
-        # If unsupported version, issue warning & try to parse like 3.1
-
         header_data_start = self.header['data_start']
         header_data_stop = self.header['data_stop']
 
-        if fcs_version == '2.0':
+        if self.version == '2.0':
             # FCS 2.0 didn't have offset keywords in TEXT.
             # Also, if the user specifies we'll use the HEADER.
             data_start = header_data_start
