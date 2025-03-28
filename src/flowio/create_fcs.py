@@ -348,6 +348,11 @@ def create_fcs(
     file_handle.write(text_string)
 
     # Convert data to array if necessary
+    # Note: The FCS data type 'F' specifies single precision
+    # floating point numbers (32-bit). This provides around
+    # 6 to 7 digits of precision, so some discrepancy is
+    # possible between the given event data and the values
+    # stored in the output file.
     if not isinstance(event_data, array):
         float_array = array('f', event_data)
     elif event_data.typecode != 'f':
