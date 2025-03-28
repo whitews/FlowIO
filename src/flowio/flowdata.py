@@ -1,4 +1,5 @@
 import array
+import copy
 from operator import and_
 from pathlib import Path
 from struct import calcsize, iter_unpack
@@ -768,10 +769,41 @@ class FlowData(object):
                 chan_num = i + 1
                 metadata['P%dR' % chan_num] = str(value)
 
+        # Need to check the data type. If not 'F', then
+        # we need to preprocess events b/c the create_fcs
+        # function only writes 'F'. For non-float data,
+        # stored channel data can have lin/log (PnE)
+        # scaling. Preprocessing the event data allows
+        # correct re-interpretation of events in the
+        # output file without downstream readers needing
+        # to re-do any scaling.
+        if self.data_type != 'F':
+            # get preprocessed events & flatten
+            events = self.as_array().flatten()
+
+            # copy metadata to make necessary edits
+            metadata = copy.deepcopy(metadata)
+
+            # change datatype to 'F'
+            metadata['datatype'] = 'F'
+
+            # replace PnE to linear, i.e. (0, 0)
+            # replace the PnG to 1.0
+            # remove timestep.
+            for chan_num in self.channels.keys():
+                metadata['P%dE' % chan_num] = '0,0'  # linear
+                metadata['P%dG' % chan_num] = '1.0'  # no gain
+
+            # remove timestep if present
+            if 'timestep' in metadata:
+                metadata.pop('timestep')
+        else:
+            events = self.events
+
         fh = open(filename, 'wb')
         fh = create_fcs(
             fh,
-            self.events,
+            events,
             self.pnn_labels,
             opt_channel_names=self.pns_labels,
             metadata_dict=metadata
