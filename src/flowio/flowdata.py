@@ -53,13 +53,22 @@ class FlowData(object):
     :ivar analysis: dictionary of key/value pairs from the ANALYSIS section (if present)
     :ivar channel_count: number of channels of event data
     :ivar channels: a dictionary of channel information, with key as channel number
-        and value is a dictionary of the PnN and PnS text
+        and value as a dictionary with 'pne', 'png', 'pnn', 'pnr', and 'pns' metadata
+    :ivar data_type: type of data in DATA segment (ASCII, integer, floating point)
     :ivar event_count: number of events
-    :ivar events: 1-D array of event data
+    :ivar events: 1-D array of unprocessed event data
     :ivar file_size: file size of the imported FCS file
+    :ivar fluoro_indices: list of indices of fluorescent channels
     :ivar header: dictionary of key/value pairs from the HEADER section
     :ivar name: file name of the imported FCS file
+    :ivar null_channels: list of channel indices not intended for analysis
+    :ivar pnn_labels: list of names for parameters (required)
+    :ivar pnr_values: list of channel range values (required)
+    :ivar pns_labels: list of optional names for parameters
+    :ivar scatter_indices: list of indices of scatter channels
     :ivar text: dictionary of key/value pairs from the TEXT section
+    :ivar time_index: index of the time channel
+    :ivar version: FCS version of the imported file
 
     :param filename_or_handle: a path string or a file handle for an FCS file
     :param ignore_offset_error: option to ignore data offset error (see above note), default is False
@@ -71,6 +80,7 @@ class FlowData(object):
         default is False
     :param nextdata_offset: an integer indicating the byte offset for a data set, used for reading
         a data set from FCS file contain multiple data sets
+    :param null_channel_list: list of PnN labels corresponding to null channels
     """
     def __init__(
             self,
