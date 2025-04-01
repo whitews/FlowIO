@@ -70,7 +70,7 @@ class FlowData(object):
     :ivar time_index: index of the time channel
     :ivar version: FCS version of the imported file
 
-    :param filename_or_handle: a path string or a file handle for an FCS file
+    :param fcs_file: a file path string, Path instance, or file handle for an FCS file
     :param ignore_offset_error: option to ignore data offset error (see above note), default is False
     :param ignore_offset_discrepancy: option to ignore discrepancy between the HEADER
         and TEXT values for the DATA byte offset location, default is False
@@ -84,7 +84,7 @@ class FlowData(object):
     """
     def __init__(
             self,
-            filename_or_handle,
+            fcs_file,
             ignore_offset_error=False,
             ignore_offset_discrepancy=False,
             use_header_offsets=False,
@@ -96,25 +96,25 @@ class FlowData(object):
         # Some file handles may not have a file name, they
         # are "in memory" files.
         self.name = None
-        if isinstance(filename_or_handle, str):
+        if isinstance(fcs_file, str):
             # Received a string for the file path, and the name
             # attribute from the resulting file handle is a full
             # path, so strip out just the file name
-            self._fh = open(str(filename_or_handle), 'rb')
+            self._fh = open(str(fcs_file), 'rb')
             self.name = os.path.basename(self._fh.name)
-        elif isinstance(filename_or_handle, Path):
+        elif isinstance(fcs_file, Path):
             # Received a Path object. These are guaranteed to
             # have a 'name' attribute and that is the base name.
-            self._fh = open(str(filename_or_handle), 'rb')
-            self.name = filename_or_handle.name
+            self._fh = open(str(fcs_file), 'rb')
+            self.name = fcs_file.name
         else:
             # Not a string or Path object, may be an object
             # from the 'io' module. If so, not all have a 'name'
             # attribute (e.g. StringIO), so may be in memory.
-            self._fh = filename_or_handle
+            self._fh = fcs_file
 
-            if hasattr(filename_or_handle, 'name'):
-                self.name = filename_or_handle.name
+            if hasattr(fcs_file, 'name'):
+                self.name = fcs_file.name
             else:
                 self.name = "InMemoryFile"
 
