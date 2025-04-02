@@ -66,12 +66,19 @@ __________
 
 ----
 
+Tutorials
+---------
+
+`FlowIO Tutorial`_
+
+.. _FlowIO Tutorial: notebooks/flowio_tutorial.ipynb
+
 API
 ---
 
 * :ref:`genindex`
 
 .. toctree::
-   :maxdepth: 3
+   :maxdepth: 2
 
    api

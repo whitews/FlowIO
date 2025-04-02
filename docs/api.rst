@@ -25,5 +25,5 @@ Creating New FCS Files
 FlowIO Exceptions
 -----------------
 
-.. automodule:: exceptions
+.. automodule:: flowio.exceptions
    :members:
