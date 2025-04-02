@@ -185,9 +185,9 @@ class FlowData(object):
             data_start = header_data_start
             data_stop = header_data_stop
         else:
-            # For 3.0, 3.1, or some other value, check if user specified,
-            # else use the TEXT section (but we'll check for discrepancy
-
+            # For 3.0, 3.1, or some other value check if user specified
+            # offsets, else use the TEXT section (but we'll check for
+            # discrepancy)
             if use_header_offsets:
                 # this option bypasses discrepancy checking between HEADER & TEXT values
                 data_start = header_data_start
