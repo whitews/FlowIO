@@ -6,7 +6,7 @@ FlowIO API
 FlowData Class
 --------------
 
-.. autoclass:: flowio.FlowData
+.. autoclass:: FlowData
     :members:
 
     .. autoclasstoc::
@@ -25,5 +25,5 @@ Creating New FCS Files
 FlowIO Exceptions
 -----------------
 
-.. automodule:: flowio.exceptions
+.. automodule:: exceptions
    :members:
