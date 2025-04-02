@@ -38,7 +38,7 @@ sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
 # -- Project information -----------------------------------------------------
 
 project = 'FlowIO'
-copyright = '2021, Scott White'
+copyright = '2025, Scott White'
 author = 'Scott White'
 
 
@@ -51,9 +51,25 @@ autodoc_member_order = 'bysource'
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
+    'autoclasstoc',
     'sphinx.ext.autodoc',
+    'sphinx.ext.autosummary',
     'nbsphinx'
 ]
+
+autodoc_default_options = {
+    'members': True,
+    'private-members': False,
+    'inherited-members': True,
+    'undoc-members': True,
+    'exclude-members': '__weakref__'
+}
+
+autoclasstoc_sections = [
+        'public-methods'
+]
+
+autoclass_content = 'both'
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
