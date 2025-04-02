@@ -10,7 +10,7 @@ import sys
 on_rtd = os.environ.get('READTHEDOCS') == 'True'
 if on_rtd:
     print(os.getcwd())
-    sys.path.insert(0, os.path.abspath('../..'))
+    sys.path.insert(0, os.path.abspath('..'))
 else:
     sys.path.insert(0, os.path.abspath('../src'))
 
