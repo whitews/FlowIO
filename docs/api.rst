@@ -6,7 +6,7 @@ FlowIO API
 FlowData Class
 --------------
 
-.. autoclass:: FlowData
+.. autoclass:: flowio.FlowData
     :members:
 
     .. autoclasstoc::
