@@ -6,23 +6,12 @@
 
 import os
 import sys
-from unittest.mock import MagicMock
 
 on_rtd = os.environ.get('READTHEDOCS') == 'True'
 if on_rtd:
-    sys.path.insert(0, os.path.abspath('..'))
+    sys.path.insert(0, os.path.abspath('../src'))
 else:
     sys.path.insert(0, os.path.abspath('..'))
-
-
-class Mock(MagicMock):
-    @classmethod
-    def __getattr__(cls, name):
-        return MagicMock()
-
-
-MOCK_MODULES = []
-sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
 
 # -- Path setup --------------------------------------------------------------
 
