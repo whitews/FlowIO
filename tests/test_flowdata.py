@@ -115,6 +115,7 @@ class FlowDataTestCase(unittest.TestCase):
         self.assertIsInstance(fcs_export, FlowData)
         os.unlink(file_name)
 
+    @staticmethod
     def test_write_fcs_from_non_f_datatype_file(self):
         # load FCS file that has non-F datatypes
         flow_data = FlowData('data/fcs_files/data1.fcs')
