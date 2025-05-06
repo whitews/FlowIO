@@ -11,7 +11,7 @@ jobs:
 
     strategy:
       matrix:
-        python-version: ["3.10"]
+        python-version: ["3.12"]
 
     steps:
       - name: Setup Python
@@ -19,11 +19,22 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
+      - name: Upgrade pip
+        run:
+          pip install --upgrade pip
+
       - name: Checkout FlowIO
         uses: actions/checkout@v4
         with:
           ref: develop
           path: flowio
+
+      - name: Checkout FlowUtils
+        uses: actions/checkout@v4
+        with:
+          repository: whitews/FlowUtils
+          ref: develop
+          path: flowutils
 
       - name: Checkout FlowKit (develop)
         uses: actions/checkout@v4
@@ -32,12 +43,20 @@ jobs:
           ref: develop
           path: flowkit
 
+      - name: Install FlowIO
+        working-directory: flowio
+        run: |
+          pip install .
+
+      - name: Install FlowUtils
+        working-directory: flowutils
+        run: |
+          pip install .
+
       - name: Install FlowKit
         working-directory: flowkit
         run: |
-          pip install --upgrade pip
           pip install .
-          pip install ../flowio
 
       - name: Run FlowKit tests
         working-directory: flowkit

@@ -6,23 +6,14 @@
 
 import os
 import sys
-from unittest.mock import MagicMock
 
 on_rtd = os.environ.get('READTHEDOCS') == 'True'
 if on_rtd:
+    print(os.getcwd())
+    print(os.listdir('..'))
     sys.path.insert(0, os.path.abspath('../src'))
 else:
     sys.path.insert(0, os.path.abspath('../src'))
-
-
-class Mock(MagicMock):
-    @classmethod
-    def __getattr__(cls, name):
-        return MagicMock()
-
-
-MOCK_MODULES = []
-sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
 
 # -- Path setup --------------------------------------------------------------
 
@@ -38,7 +29,7 @@ sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
 # -- Project information -----------------------------------------------------
 
 project = 'FlowIO'
-copyright = '2021, Scott White'
+copyright = '2025, Scott White'
 author = 'Scott White'
 
 
@@ -51,8 +42,25 @@ autodoc_member_order = 'bysource'
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
-    'sphinx.ext.autodoc'
+    'autoclasstoc',
+    'sphinx.ext.autodoc',
+    'sphinx.ext.autosummary',
+    'nbsphinx'
 ]
+
+autodoc_default_options = {
+    'members': True,
+    'private-members': False,
+    'inherited-members': True,
+    'undoc-members': True,
+    'exclude-members': '__weakref__'
+}
+
+autoclasstoc_sections = [
+        'public-methods'
+]
+
+autoclass_content = 'both'
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']

@@ -7,7 +7,7 @@ from flowio.utils import read_multiple_data_sets
 
 class MultipleDatasetsTestCase(unittest.TestCase):
     def setUp(self):
-        self.file = "examples/fcs_files/coulter.lmd"
+        self.file = "data/fcs_files/coulter.lmd"
         self.amount_datasets = 2
         self.channel_count = 8
         self.event_count = 18110

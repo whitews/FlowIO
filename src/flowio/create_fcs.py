@@ -120,7 +120,7 @@ def create_fcs(
         A proper spillover matrix shall have the first value corresponding to the
         number of compensated fluorescence channels followed by the $PnN names
         which should match the given channel_names argument. All values in the
-        spill text string should be comma delimited with no newline characters.
+        spill text string should be comma-delimited with no newline characters.
 
     :param file_handle: file handle for new FCS file
     :param event_data: list of event data (flattened 1-D list)
@@ -215,6 +215,8 @@ def create_fcs(
                 )
 
         # PnG - gain
+        # For data type 'f', gain values other than 1.0 are allowed,
+        # check the metadata dict first, and set to 1.0 if not found.
         png_key = 'p%dg' % chan_num
         if png_key in proc_metadata_dict:
             png_value = proc_metadata_dict[png_key]
@@ -345,8 +347,20 @@ def create_fcs(
     # Write out the entire text section (already UTF-8 encoded)
     file_handle.write(text_string)
 
-    # And now our data!
-    float_array = array('f', event_data)
+    # Convert data to array if necessary
+    # Note: The FCS data type 'F' specifies single precision
+    # floating point numbers (32-bit). This provides around
+    # 6 to 7 digits of precision, so some discrepancy is
+    # possible between the given event data and the values
+    # stored in the output file.
+    if not isinstance(event_data, array):
+        float_array = array('f', event_data)
+    elif event_data.typecode != 'f':
+        float_array = array('f', event_data)
+    else:
+        float_array = event_data
+
+    # Write the event data to file
     float_array.tofile(file_handle)
 
     return file_handle

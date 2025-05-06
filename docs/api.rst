@@ -9,6 +9,8 @@ FlowData Class
 .. autoclass:: FlowData
     :members:
 
+    .. autoclasstoc::
+
 
 Reading FCS Files with Multiple Data Sets
 -----------------------------------------

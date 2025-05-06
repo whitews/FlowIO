@@ -1,3 +1,10 @@
+[build-system]
+requires = ['setuptools>=61.0']
+build-backend   = 'setuptools.build_meta'
+
+[tool.setuptools.dynamic]
+version = {attr = "flowio._version.__version__"}
+
 [project]
 name = "FlowIO"
 dynamic = ["version"]
@@ -10,20 +17,14 @@ authors = [
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "License :: OSI Approved :: BSD License",
+    "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.7"
+    "Programming Language :: Python :: 3.9"
 ]
-
-[tool.setuptools.dynamic]
-version = {attr = "flowio.__version__"}
-
-[project.optional-dependencies]
-test = [
-    "numpy>=1.17",
+dependencies = [
+    "numpy>=1.19.3"
 ]
 
 [project.urls]
@@ -32,7 +33,3 @@ Documentation = "https://flowio.readthedocs.io/en/latest/"
 Repository = "https://github.com/whitews/flowio"
 Issues = "https://github.com/whitews/FlowIO/issues"
 Changelog = "https://github.com/whitews/FlowIO/releases"
-
-[build-system]
-requires = ['setuptools>=61.0']
-build-backend   = 'setuptools.build_meta'

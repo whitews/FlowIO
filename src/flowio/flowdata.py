@@ -1,9 +1,12 @@
 import array
+import copy
 from operator import and_
+from pathlib import Path
 from struct import calcsize, iter_unpack
 from warnings import warn
 import os
 import re
+import numpy as np
 from functools import reduce
 from .create_fcs import create_fcs
 from .exceptions import FCSParsingError, DataOffsetDiscrepancyError, MultipleDataSetsError
@@ -50,15 +53,24 @@ class FlowData(object):
     :ivar analysis: dictionary of key/value pairs from the ANALYSIS section (if present)
     :ivar channel_count: number of channels of event data
     :ivar channels: a dictionary of channel information, with key as channel number
-        and value is a dictionary of the PnN and PnS text
+        and value as a dictionary with 'pne', 'png', 'pnn', 'pnr', and 'pns' metadata
+    :ivar data_type: type of data in DATA segment (ASCII, integer, floating point)
     :ivar event_count: number of events
-    :ivar events: 1-D array of event data
+    :ivar events: 1-D array of unprocessed event data
     :ivar file_size: file size of the imported FCS file
+    :ivar fluoro_indices: list of indices of fluorescent channels
     :ivar header: dictionary of key/value pairs from the HEADER section
     :ivar name: file name of the imported FCS file
+    :ivar null_channels: list of channel indices not intended for analysis
+    :ivar pnn_labels: list of names for parameters (required)
+    :ivar pnr_values: list of channel range values (required)
+    :ivar pns_labels: list of optional names for parameters
+    :ivar scatter_indices: list of indices of scatter channels
     :ivar text: dictionary of key/value pairs from the TEXT section
+    :ivar time_index: index of the time channel
+    :ivar version: FCS version of the imported file
 
-    :param filename_or_handle: a path string or a file handle for an FCS file
+    :param fcs_file: a file path string, Path instance, or file handle for an FCS file
     :param ignore_offset_error: option to ignore data offset error (see above note), default is False
     :param ignore_offset_discrepancy: option to ignore discrepancy between the HEADER
         and TEXT values for the DATA byte offset location, default is False
@@ -68,29 +80,47 @@ class FlowData(object):
         default is False
     :param nextdata_offset: an integer indicating the byte offset for a data set, used for reading
         a data set from FCS file contain multiple data sets
+    :param null_channel_list: list of PnN labels corresponding to null channels
     """
     def __init__(
             self,
-            filename_or_handle,
+            fcs_file,
             ignore_offset_error=False,
             ignore_offset_discrepancy=False,
             use_header_offsets=False,
             only_text=False,
             nextdata_offset=None,
+            null_channel_list=None
     ):
-        if isinstance(filename_or_handle, basestring):
-            self._fh = open(str(filename_or_handle), 'rb')
+        # Determine input type and its name.
+        # Some file handles may not have a file name, they
+        # are "in memory" files.
+        self.name = None
+        if isinstance(fcs_file, str):
+            # Received a string for the file path, and the name
+            # attribute from the resulting file handle is a full
+            # path, so strip out just the file name
+            self._fh = open(str(fcs_file), 'rb')
+            self.name = os.path.basename(self._fh.name)
+        elif isinstance(fcs_file, Path):
+            # Received a Path object. These are guaranteed to
+            # have a 'name' attribute and that is the base name.
+            self._fh = open(str(fcs_file), 'rb')
+            self.name = fcs_file.name
         else:
-            self._fh = filename_or_handle
+            # Not a string or Path object, may be an object
+            # from the 'io' module. If so, not all have a 'name'
+            # attribute (e.g. StringIO), so may be in memory.
+            self._fh = fcs_file
+
+            if hasattr(fcs_file, 'name'):
+                self.name = fcs_file.name
+            else:
+                self.name = "InMemoryFile"
 
         current_offset = nextdata_offset if nextdata_offset else 0
 
         self._ignore_offset = ignore_offset_error
-
-        try:
-            unused_path, self.name = os.path.split(self._fh.name)
-        except (AttributeError, TypeError):
-            self.name = 'InMemoryFile'
 
         # Get actual file size for sanity check of data section
         self._fh.seek(0, os.SEEK_END)
@@ -99,6 +129,9 @@ class FlowData(object):
 
         # parse headers
         self.header = self.__parse_header(current_offset)
+
+        # Get FCS version from the header for convenient lookup
+        self.version = self.header['version']
 
         # parse text
         self.text = self.__parse_text(
@@ -115,13 +148,16 @@ class FlowData(object):
 
         self.channel_count = int(self.text['par'])
         self.event_count = int(self.text['tot'])
+        self.data_type = self.text['datatype']
 
         # parse analysis
         try:
+            # noinspection SpellCheckingInspection
             a_start = int(self.text['beginanalysis'])
         except KeyError:
             a_start = self.header['analysis_start']
         try:
+            # noinspection SpellCheckingInspection
             a_stop = int(self.text['endanalysis'])
         except KeyError:
             a_stop = self.header['analysis_stop']
@@ -140,30 +176,27 @@ class FlowData(object):
         #    overridden by setting the ignore_offset_discrepancy option to True.
         #    Users can force the use of the HEADER values for the data lookup by
         #    setting the use_header_offsets option to True.
-        fcs_version = self.header['version']
-
-        # check if FCS version is supported (3.0, 3.1)
-        # If unsupported version, issue warning & try to parse like 3.1
-
         header_data_start = self.header['data_start']
         header_data_stop = self.header['data_stop']
 
-        if fcs_version == '2.0':
+        if self.version == '2.0':
             # FCS 2.0 didn't have offset keywords in TEXT.
             # Also, if the user specifies we'll use the HEADER.
             data_start = header_data_start
             data_stop = header_data_stop
         else:
-            # For 3.0, 3.1, or some other value, check if user specified,
-            # else use the TEXT section (but we'll check for discrepancy
-
+            # For 3.0, 3.1, or some other value check if user specified
+            # offsets, else use the TEXT section (but we'll check for
+            # discrepancy)
             if use_header_offsets:
                 # this option bypasses discrepancy checking between HEADER & TEXT values
                 data_start = header_data_start
                 data_stop = header_data_stop
             else:
                 # use TEXT section
+                # noinspection SpellCheckingInspection
                 data_start = int(self.text['begindata'])
+                # noinspection SpellCheckingInspection
                 data_stop = int(self.text['enddata'])
 
                 # check if different from HEADER values & not due to large file
@@ -208,17 +241,63 @@ class FlowData(object):
             self._fh.close()
             raise FCSParsingError("FCS file indicates data section greater than file size")
 
+        # Extract channel metadata from the text data.
+        # Need this for pre-processing the event data.
+        self.channels = self.__extract_channel_metadata()
+
+        # Setup variables we'll need for storing various channel related metadata
+        self.pnn_labels = list()
+        self.pns_labels = list()
+        self.pnr_values = list()
+        self.fluoro_indices = list()
+        self.scatter_indices = list()
+        self.time_index = None
+
+        # Ensure null channels is a list for checking later
+        if null_channel_list is None:
+            self.null_channels = []
+        else:
+            self.null_channels = null_channel_list
+
+        for n in sorted([int(k) for k in self.channels.keys()]):
+            channel_dict = self.channels[n]
+
+            channel_label = channel_dict['pnn']
+            self.pnn_labels.append(channel_label)
+            self.pns_labels.append(channel_dict['pns'])
+            self.pnr_values.append(channel_dict['pnr'])
+
+            # Determine fluoro vs scatter vs time channels
+            # Null channels are excluded from any category.
+            # NOTE: We save the indices here, not the channel numbers.
+            if channel_label in self.null_channels:
+                pass
+            elif channel_label.lower()[:4] not in ['fsc-', 'ssc-', 'time']:
+                self.fluoro_indices.append(n - 1)
+            elif channel_label.lower()[:4] in ['fsc-', 'ssc-']:
+                self.scatter_indices.append(n - 1)
+            elif channel_label.lower() == 'time':
+                self.time_index = n - 1
+
+                # Note: The time channel is scaled by the timestep (if present),
+                # but should not be scaled by any gain value present in PnG.
+                # It seems common for cytometers to include a gain value for the
+                # time channel that matches either the fluoro channels or the
+                # timestep keyword value. Not sure why they do this, but it
+                # makes no sense to have an amplifier gain on the time data.
+                # Here, we set any time gain to 1.0.
+                channel_dict['png'] = 1.0
+
         if only_text:
             self.events = None
         else:
+            # Parse DATA segment (returns a flat list of event data)
             self.events = self.__parse_data(
                 current_offset,
                 data_start,
                 data_stop,
                 self.text
             )
-
-        self.channels = self._parse_channels()
 
         self._fh.close()
 
@@ -281,20 +360,13 @@ class FlowData(object):
         if start == stop:
             return {}
         else:
-            num_items = (stop - start + 1)
-            self._fh.seek(offset + start)
-            tmp = array.array('b')
-            tmp.fromfile(self._fh, int(num_items))
-            tmp = tmp.tobytes()
-
-            try:
-                # try UTF-8 first
-                tmp = tmp.decode()
-            except UnicodeDecodeError:
-                # next best guess is Latin-1, if not that either, we throw the exception
-                tmp = tmp.decode("ISO-8859-1")
-
-            return self.__parse_pairs(tmp)
+            # FCS standard states:
+            #    The ANALYSIS segment has the same structure as the TEXT
+            #    segment; i.e., it consists of a series of keyword-value
+            #    pairs. There are no required keywords for the ANALYSIS
+            #    segment.
+            # So we'll use the __parse_text method to parse this section.
+            return self.__parse_text(offset, start, stop)
 
     def __parse_data(self, offset, start, stop, text):
         """
@@ -302,17 +374,24 @@ class FlowData(object):
         """
         data_type = text['datatype']
         mode = text['mode']
+
+        # FlowData only supports list mode data ('l')
+        # Values 'c' & 'u' are deprecated in FCS 3.1 and
+        # correspond to correlated multivariate histogram ('c')
+        # and uncorrelated univariate histogram ('u') data.
         if mode == 'c' or mode == 'u':
             self._fh.close()
             raise NotImplementedError(
                 "FCS data stored as type \'%s\' is unsupported" % mode
             )
 
+        # noinspection SpellCheckingInspection
         if text['byteord'] == '1,2,3,4' or text['byteord'] == '1,2':
             order = '<'
         elif text['byteord'] == '4,3,2,1' or text['byteord'] == '2,1':
             order = '>'
         else:
+            # noinspection SpellCheckingInspection
             warn("unsupported byte order %s , using default @" % text['byteord'])
             order = '@'
             # from here on out we assume mode "l" (list)
@@ -439,6 +518,8 @@ class FlowData(object):
                 # parameter sizes are different
                 # e.g. 8, 8, 16, 8, 32 ...
                 # can't use array for heterogeneous bit widths
+                # TODO: Now that we have NumPy as a dependency, investigate whether
+                #       using NumPy arrays can speed this up.
                 tmp = self.__extract_var_length_int(
                     bit_width_lut,
                     max_range_lut,
@@ -525,32 +606,130 @@ class FlowData(object):
                 "Invalid integer bit size (%d) for event data. Compatible sizes are 8, 16, & 32." % b
             )
 
-    def _parse_channels(self):
+    def __extract_channel_metadata(self):
         """
         Returns a dictionary of channels, with key as channel number
         and value is a dictionary of the PnN and PnS text
         """
         channels = dict()
+
+        # Find the required PnN values in the metadata so we know how many channels
+        # there are in the FCS file.
         regex_pnn = re.compile(r"^p(\d+)n$", re.IGNORECASE)
 
+        # Search through all metadata keys once to find the PnN values
         for i in self.text.keys():
             match = regex_pnn.match(i)
             if not match:
                 continue
 
-            channel_num = match.groups()[0]
+            channel_num = int(match.groups()[0])
             channels[channel_num] = dict()
 
-            channels[channel_num]['PnN'] = self.text[match.group()]
+            channels[channel_num]['pnn'] = self.text[match.group()]
 
-            # now check for PnS field, which is optional so may not exist
-            regex_pns = re.compile("^p%ss$" % channel_num, re.IGNORECASE)
-            for j in self.text.keys():
-                match = regex_pns.match(j)
-                if match:
-                    channels[channel_num]['PnS'] = self.text[match.group()]
+
+        # Now iterate through the known channels to find the fields:
+        #     PnE: amplification type for log/lin scale (required)
+        #     PnG: channel gain (optional)
+        #     PnR: maximum data range (required)
+        #     PnS: alternate channel labels (optional)
+        for chan_num, chan_dict in channels.items():
+            # PnS is optional
+            if 'p%ds' % chan_num in self.text:
+                chan_dict['pns'] = self.text['p%ds' % chan_num]
+            else:
+                # empty string if not present
+                chan_dict['pns'] = ''
+
+            # PnE specifies whether the parameter data is stored in on linear or log scale
+            # and includes 2 values: (f1, f2)
+            # where:
+            #     f1 is the number of log decades (valid values are f1 >= 0)
+            #     f2 is the value to use for log(0) (valid values are f2 >= 0)
+            # Note for log scale, both values must be > 0
+            # linear = (0, 0)
+            # log    = (f1 > 0, f2 > 0)
+            if 'p%de' % chan_num in self.text:
+                (decades, log0) = [
+                    float(x) for x in self.text['p%de' % chan_num].split(',')
+                ]
+                if log0 == 0 and decades != 0:
+                    log0 = 1.0  # FCS std states to use 1.0 for invalid 0 value
+
+                chan_dict['pne'] = (decades, log0)
+            else:
+                # PnE is required so should be there, but if not
+                # set to linear
+                chan_dict['pne'] = (0.0, 0.0)
+
+            # PnG is optional, value is a float
+            if 'p%dg' % chan_num in self.text:
+                chan_dict['png'] = float(self.text['p%dg' % chan_num])
+            else:
+                # assumed 1.0 if absent
+                chan_dict['png'] = 1.0
+
+            # PnR is required
+            chan_dict['pnr'] = float(self.text['p%dr' % chan_num])
 
         return channels
+
+    def as_array(self, preprocess=True):
+        """
+        Retrieve the event data list as a 2-D NumPy array. Pre-processing is
+        applied if requested and includes applying gain, log, and time scaling
+        as necessary.
+
+        :param preprocess: Boolean for whether to apply gain, log, and  time
+            scaling as necessary according the FCS metadata (default is True).
+
+        :return: NumPy array of 2-D event data
+        """
+        # Start processing the event data. Ensure events are double precision
+        # because pre-processing will convert all events (even integer data types)
+        # to floating point. This precision is needed for accurate downstream
+        # analysis (e.g. gating results).
+        tmp_events = np.reshape(
+            np.array(self.events, dtype=np.float64),
+            (-1, self.channel_count)
+        )
+
+        if preprocess:
+            # Event data must be scaled according to channel gain, as well
+            # as corrected for proper lin/log display, and the time channel
+            # scaled by the 'timestep' keyword value (if present).
+            # We'll start with the time channel.
+            if 'timestep' in self.text and self.time_index is not None:
+                try:
+                    time_step = float(self.text['timestep'])
+                except ValueError:
+                    # Some FCS files contain an empty string or whitespace values
+                    # for the 'timestep' keyword. In these cases, set to 1.0
+                    if self.text['timestep'].strip() == '':
+                        time_step = 1.0
+                    else:
+                        raise ValueError(f"Timestep value should be a float value but found the value '{self.text['timestep']}'")
+                tmp_events[:, self.time_index] = tmp_events[:, self.time_index] * time_step
+
+            # Process channels
+            # For channel data stored on logarithmic scale will get converted
+            # to a linear scale. For channel's stored with amplified data, where
+            # gain (PnG) is != 1.0 (or zero, since it's equivalent to no gain).
+            for chan_num, chan_dict in self.channels.items():
+                # Note that keys are channel numbers, not indices
+                chan_idx = chan_num - 1
+                (chan_decades, chan_log0) = chan_dict['pne']
+                chan_range = chan_dict['pnr']
+                chan_gain = chan_dict['png']
+
+                if chan_decades > 0:
+                    tmp_events[:, chan_idx] = (10 ** (chan_decades * tmp_events[:, chan_idx] / chan_range)) * chan_log0
+
+                if chan_gain != 1.0 and chan_gain != 0:
+                    tmp_events[:, chan_idx] = tmp_events[:, chan_idx] / chan_gain
+
+        return tmp_events
 
     def write_fcs(self, filename, metadata=None):
         """
@@ -559,7 +738,10 @@ class FlowData(object):
         By default, the output FCS file will include the $cyt, $date, and $spill
         keywords (and values) from the FlowData instance. To exclude these keys,
         specify a custom `metadata` dictionary (including an empty dictionary for
-        the bare minimum metadata).
+        the bare minimum metadata). Note: Any critical keywords related to the
+        interpretation of the event data are defined and set internally,
+        overriding those in the provided `metadata` dictionary. These keywords
+        include: PnB, PnE, and PnG.
 
         :param filename: name of exported FCS file
         :param metadata: an optional dictionary for adding metadata keywords/values
@@ -586,21 +768,54 @@ class FlowData(object):
             if 'cyt' in self.text:
                 metadata['cyt'] = self.text['cyt']
 
-        pnn_labels = [''] * len(self.channels)
-        pns_labels = [''] * len(self.channels)
+            # TODO: we need to verify if other PnX sets
+            #  need to be included (esp. PnG) since this
+            #  method will write out the unprocessed events,
+            #  these values may need to be preserved.
 
-        for k in self.channels:
-            pnn_labels[int(k) - 1] = self.channels[k]['PnN']
+            # copy PnR values from file
+            for i, value in enumerate(self.pnr_values):
+                # Use channel numbers and not indices
+                chan_num = i + 1
+                metadata['P%dR' % chan_num] = str(value)
 
-            if 'PnS' in self.channels[k]:
-                pns_labels[int(k) - 1] = self.channels[k]['PnS']
+        # Need to check the data type. If not 'F', then
+        # we need to preprocess events b/c the create_fcs
+        # function only writes 'F'. For non-float data,
+        # stored channel data can have lin/log (PnE)
+        # scaling. Preprocessing the event data allows
+        # correct re-interpretation of events in the
+        # output file without downstream readers needing
+        # to re-do any scaling.
+        if self.data_type != 'F':
+            # get preprocessed events & flatten
+            events = self.as_array().flatten()
+
+            # copy metadata to make necessary edits
+            metadata = copy.deepcopy(metadata)
+
+            # change datatype to 'F'
+            metadata['datatype'] = 'F'
+
+            # replace PnE to linear, i.e. (0, 0)
+            # replace the PnG to 1.0
+            # remove timestep.
+            for chan_num in self.channels.keys():
+                metadata['P%dE' % chan_num] = '0,0'  # linear
+                metadata['P%dG' % chan_num] = '1.0'  # no gain
+
+            # remove timestep if present
+            if 'timestep' in metadata:
+                metadata.pop('timestep')
+        else:
+            events = self.events
 
         fh = open(filename, 'wb')
         fh = create_fcs(
             fh,
-            self.events,
-            pnn_labels,
-            opt_channel_names=pns_labels,
+            events,
+            self.pnn_labels,
+            opt_channel_names=self.pns_labels,
             metadata_dict=metadata
         )
         fh.close()
