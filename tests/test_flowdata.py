@@ -115,6 +115,36 @@ class FlowDataTestCase(unittest.TestCase):
         self.assertIsInstance(fcs_export, FlowData)
         os.unlink(file_name)
 
+    def test_write_fcs_from_non_f_datatype_file(self):
+        # load FCS file that has non-F datatypes
+        flow_data = FlowData('data/fcs_files/data1.fcs')
+
+        # get preprocessed event array to serve as ground truth
+        orig_proc_events = flow_data.as_array(preprocess=True)
+
+        # write out new FCS file
+        # this will force preprocessing and the resulting FCS file will
+        # have 'F' data type.
+        tmp_flow_data_out_filename = 'tmp_flowdata_from_non_f_datatype.fcs'
+        flow_data.write_fcs(tmp_flow_data_out_filename, metadata=flow_data.text)
+
+        # load the exported FCS file
+        new_flow_data = FlowData(tmp_flow_data_out_filename)
+
+        # get both unprocessed and processed event arrays,
+        # they should be the same as each other and as the
+        # original processed events.
+        new_unproc_events = new_flow_data.as_array(preprocess=False)
+        new_proc_events = new_flow_data.as_array(preprocess=True)
+
+        # The only variation is floating point precision differences
+        # from saving to a file. This should be around 7 digits, but
+        # depending on the magnitude, the number of decimal places
+        # vary. In this data, it's around 4 decimal places event though
+        # the relative differences max out around 1e-7
+        np.testing.assert_array_almost_equal(new_unproc_events, orig_proc_events, decimal=3)
+        np.testing.assert_array_almost_equal(new_proc_events, orig_proc_events, decimal=3)
+
     def test_parse_var_int_data(self):
         event_values = [
             49135, 61373, 48575, 49135, 61373, 48575, 7523, 598, 49135, 61373,
