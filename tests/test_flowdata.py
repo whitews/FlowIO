@@ -116,7 +116,7 @@ class FlowDataTestCase(unittest.TestCase):
         os.unlink(file_name)
 
     @staticmethod
-    def test_write_fcs_from_non_f_datatype_file(self):
+    def test_write_fcs_from_non_f_datatype_file():
         # load FCS file that has non-F datatypes
         flow_data = FlowData('data/fcs_files/data1.fcs')
 
@@ -135,16 +135,16 @@ class FlowDataTestCase(unittest.TestCase):
         # get both unprocessed and processed event arrays,
         # they should be the same as each other and as the
         # original processed events.
-        new_unproc_events = new_flow_data.as_array(preprocess=False)
-        new_proc_events = new_flow_data.as_array(preprocess=True)
+        new_unprocessed_events = new_flow_data.as_array(preprocess=False)
+        new_processed_events = new_flow_data.as_array(preprocess=True)
 
         # The only variation is floating point precision differences
         # from saving to a file. This should be around 7 digits, but
         # depending on the magnitude, the number of decimal places
         # vary. In this data, it's around 4 decimal places event though
         # the relative differences max out around 1e-7
-        np.testing.assert_array_almost_equal(new_unproc_events, orig_proc_events, decimal=3)
-        np.testing.assert_array_almost_equal(new_proc_events, orig_proc_events, decimal=3)
+        np.testing.assert_array_almost_equal(new_unprocessed_events, orig_proc_events, decimal=3)
+        np.testing.assert_array_almost_equal(new_processed_events, orig_proc_events, decimal=3)
 
     def test_parse_var_int_data(self):
         event_values = [
@@ -183,9 +183,9 @@ class FlowDataTestCase(unittest.TestCase):
         orig_fd = FlowData('data/fcs_files/100715.fcs')
         expected = orig_fd.channels
 
-        with tempfile.NamedTemporaryFile() as tmpfile:
-            orig_fd.write_fcs(tmpfile.name)
-            out_data = FlowData(tmpfile.name)
+        with tempfile.NamedTemporaryFile() as tmp_file:
+            orig_fd.write_fcs(tmp_file.name)
+            out_data = FlowData(tmp_file.name)
             actually = out_data.channels
 
             self.assertDictEqual(expected, actually)
