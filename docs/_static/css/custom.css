@@ -19,3 +19,11 @@ dt.field-even {
 dd.field-even {
     padding-top: 27px;
 }
+
+/*
+For RTD tables from Markdown, force tables to wrap-around
+so they don't scroll horizontally.
+*/
+.wy-table-responsive table td, .wy-table-responsive table th {
+    white-space: unset !important;
+}
