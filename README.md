@@ -17,12 +17,10 @@
 FlowIO is a Python library for reading and writing Flow Cytometry Standard (FCS)
 files, with minimal dependencies and is compatible with Python 3.9+. It is intended 
 as a lightweight library, suitable for parsing FCS data sets (e.g. as a web server 
-backend, for simple metadata extraction, etc.). It is **highly recommended** that 
-one be familiar with the various FCS file standards (2.0, 3.0, 3,1) before using 
-FlowIO for downstream analysis. For higher level cytometry analysis, please see the 
-related [FlowKit](https://github.com/whitews/FlowKit) library which offers a much 
-wider set of analysis options such as compensation, transformation, and gating 
-support (including support for importing FlowJo 10 workspaces).
+backend, for simple metadata extraction, etc.). For higher level cytometry analysis, 
+please see the related [FlowKit](https://github.com/whitews/FlowKit) library which 
+offers a much wider set of analysis options such as compensation, transformation, 
+and gating support (including support for importing FlowJo 10 workspaces).
 
 If you have any questions about FlowIO, find any bugs, or feel something is missing 
 from the documentation [please submit an issue to the GitHub repository here](https://github.com/whitews/FlowIO/issues/new/).
