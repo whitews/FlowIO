@@ -70,17 +70,18 @@ class FlowData(object):
     :ivar time_index: index of the time channel
     :ivar version: FCS version of the imported file
 
-    :param fcs_file: a file path string, Path instance, or file handle for an FCS file
+    :param fcs_file: a file path string, Path instance, or file handle to an FCS file
     :param ignore_offset_error: option to ignore data offset error (see above note), default is False
     :param ignore_offset_discrepancy: option to ignore discrepancy between the HEADER
         and TEXT values for the DATA byte offset location, default is False
     :param use_header_offsets: use the HEADER section for the data offset locations, default is False.
         Setting this option to True also suppresses an error in cases of an offset discrepancy.
-    :param only_text: option to only read the "text" segment of the FCS file without loading event data,
+    :param only_text: option to only read the TEXT segment of the FCS file without loading event data,
         default is False
     :param nextdata_offset: an integer indicating the byte offset for a data set, used for reading
         a data set from FCS file contain multiple data sets
-    :param null_channel_list: list of PnN labels corresponding to null channels
+    :param null_channel_list: list of PnN labels corresponding to null channels. Null channels are
+        omitted from fluoro_indices, scatter_indices, and time_index.
     """
     def __init__(
             self,
