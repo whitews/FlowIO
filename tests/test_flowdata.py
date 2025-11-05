@@ -73,6 +73,25 @@ class FlowDataTestCase(unittest.TestCase):
         np.testing.assert_array_equal(events_orig[:, time_index], events_preproc[:, time_index])
 
     @staticmethod
+    def test_as_array_with_preprocessing_with_zero_gain():
+        # If FCS have PnG (gain) values of 0, they should be treated
+        # as having a gain of 1.0 (i.e. no gain). If the 0 gain was
+        # allowed it would result in divide by zero warnings and
+        # incorrect pre-processed event data.
+        flow_data = FlowData('data/fcs_files/zero_gain/M0_WM278_S1.fcs')
+
+        # Get both unprocessed and preprocessed to compare channel events.
+        # Since there's zero gain, the events should be the same
+        events_orig = flow_data.as_array(preprocess=False)
+        events_preproc = flow_data.as_array(preprocess=True)
+
+        # first test that there are no np.inf or np.nan values,
+        # then test the raw and pre-processed arrays are equal.
+        np.testing.assert_equal(np.sum(np.isinf(events_preproc)), 0)
+        np.testing.assert_equal(np.sum(np.isnan(events_preproc)), 0)
+        np.testing.assert_array_equal(events_orig, events_preproc)
+
+    @staticmethod
     def test_as_array_no_preprocessing():
         # 'data1.fcs' has some channels with non 1.0 gain and some stored as non-linear
         # so is a good test for the pre-processing in the FlowData.as_array() method.
