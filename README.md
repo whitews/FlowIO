@@ -27,6 +27,32 @@ support (including support for importing FlowJo 10 workspaces).
 If you have any questions about FlowIO, find any bugs, or feel something is missing 
 from the documentation [please submit an issue to the GitHub repository here](https://github.com/whitews/FlowIO/issues/new/).
 
+### Metadata probe and lazy DATA access
+
+For channel / `$TOT` / datatype checks without loading events, open a file with
+`FlowData(path, only_text=True)`. That parses HEADER + TEXT (and ANALYSIS) and
+leaves `events` as `None`, while still exposing DATA offsets and related metadata.
+
+For uniform IEEE float layouts (`$DATATYPE=F` or `D`), you can then memory-map or
+subsample events without a full in-memory load:
+
+```python
+from flowio import FlowData
+
+# Lightweight metadata probe
+meta = FlowData("sample.fcs", only_text=True)
+print(meta.pnn_labels, meta.event_count, meta.data_type)
+
+# Read-only memmap shaped (event_count, channel_count)
+mm = meta.as_memmap()
+
+# Selected 0-based event rows as a float64 array
+rows = meta.read_events(indices=[0, 10, 100])
+```
+
+ASCII and variable bit-width integer layouts raise `UnsupportedLazyDataError` from
+these helpers; load those files normally (without `only_text=True`) and use
+`read_events()` / `as_array()` on the in-memory events.
 ## Installation
 
 The recommended way to install FlowIO is via the `pip` command:

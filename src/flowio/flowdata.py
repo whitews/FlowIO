@@ -9,7 +9,12 @@ import re
 import numpy as np
 from functools import reduce
 from .create_fcs import create_fcs
-from .exceptions import FCSParsingError, DataOffsetDiscrepancyError, MultipleDataSetsError
+from .exceptions import (
+    FCSParsingError,
+    DataOffsetDiscrepancyError,
+    MultipleDataSetsError,
+    UnsupportedLazyDataError,
+)
 
 try:
     # noinspection PyUnresolvedReferences, PyUnboundLocalVariable
@@ -54,9 +59,11 @@ class FlowData(object):
     :ivar channel_count: number of channels of event data
     :ivar channels: a dictionary of channel information, with key as channel number
         and value as a dictionary with 'pne', 'png', 'pnn', 'pnr', and 'pns' metadata
+    :ivar data_start: DATA segment start byte offset relative to the dataset origin
+    :ivar data_stop: DATA segment stop byte offset (inclusive) relative to the dataset origin
     :ivar data_type: type of data in DATA segment (ASCII, integer, floating point)
     :ivar event_count: number of events
-    :ivar events: 1-D array of unprocessed event data
+    :ivar events: 1-D array of unprocessed event data, or None when ``only_text=True``
     :ivar file_size: file size of the imported FCS file
     :ivar fluoro_indices: list of indices of fluorescent channels
     :ivar header: dictionary of key/value pairs from the HEADER section
@@ -76,8 +83,12 @@ class FlowData(object):
         and TEXT values for the DATA byte offset location, default is False
     :param use_header_offsets: use the HEADER section for the data offset locations, default is False.
         Setting this option to True also suppresses an error in cases of an offset discrepancy.
-    :param only_text: option to only read the "text" segment of the FCS file without loading event data,
-        default is False
+    :param only_text: option to only read the TEXT segment (plus HEADER / ANALYSIS and
+        channel metadata) without loading event data. This is the supported lightweight
+        metadata probe: ``events`` is set to ``None``, while ``data_start`` / ``data_stop``,
+        ``data_type``, ``channel_count``, ``event_count``, and related TEXT keywords remain
+        available so callers can inspect the file or use :meth:`as_memmap` /
+        :meth:`read_events` later without re-parsing TEXT. Default is False.
     :param nextdata_offset: an integer indicating the byte offset for a data set, used for reading
         a data set from FCS file contain multiple data sets
     :param null_channel_list: list of PnN labels corresponding to null channels
@@ -96,16 +107,19 @@ class FlowData(object):
         # Some file handles may not have a file name, they
         # are "in memory" files.
         self.name = None
+        self._file_path = None
         if isinstance(fcs_file, str):
             # Received a string for the file path, and the name
             # attribute from the resulting file handle is a full
             # path, so strip out just the file name
-            self._fh = open(str(fcs_file), 'rb')
+            self._file_path = os.path.abspath(fcs_file)
+            self._fh = open(self._file_path, 'rb')
             self.name = os.path.basename(self._fh.name)
         elif isinstance(fcs_file, Path):
             # Received a Path object. These are guaranteed to
             # have a 'name' attribute and that is the base name.
-            self._fh = open(str(fcs_file), 'rb')
+            self._file_path = str(fcs_file.resolve())
+            self._fh = open(self._file_path, 'rb')
             self.name = fcs_file.name
         else:
             # Not a string or Path object, may be an object
@@ -115,10 +129,17 @@ class FlowData(object):
 
             if hasattr(fcs_file, 'name'):
                 self.name = fcs_file.name
+                # Prefer a real filesystem path when the handle exposes one.
+                try:
+                    if isinstance(fcs_file.name, str) and os.path.isfile(fcs_file.name):
+                        self._file_path = os.path.abspath(fcs_file.name)
+                except (TypeError, ValueError, OSError):
+                    self._file_path = None
             else:
                 self.name = "InMemoryFile"
 
         current_offset = nextdata_offset if nextdata_offset else 0
+        self._dataset_offset = current_offset
 
         self._ignore_offset = ignore_offset_error
 
@@ -240,6 +261,11 @@ class FlowData(object):
         if data_stop > self.file_size:
             self._fh.close()
             raise FCSParsingError("FCS file indicates data section greater than file size")
+
+        # Expose resolved DATA offsets for lazy / mmap helpers. These are relative
+        # to the dataset origin (``_dataset_offset``); see ``data_byte_range``.
+        self.data_start = data_start
+        self.data_stop = data_stop
 
         # Extract channel metadata from the text data.
         # Need this for pre-processing the event data.
@@ -675,6 +701,171 @@ class FlowData(object):
 
         return channels
 
+    @property
+    def data_byte_range(self):
+        """
+        Absolute inclusive byte offsets ``(start, stop)`` of the DATA segment
+        within the FCS file.
+
+        These values include any ``nextdata_offset`` used when reading a dataset
+        from a multi-dataset file.
+        """
+        return (
+            self._dataset_offset + self.data_start,
+            self._dataset_offset + self.data_stop,
+        )
+
+    def _byte_order_char(self):
+        # noinspection SpellCheckingInspection
+        byteord = self.text['byteord']
+        if byteord == '1,2,3,4' or byteord == '1,2':
+            return '<'
+        if byteord == '4,3,2,1' or byteord == '2,1':
+            return '>'
+        raise UnsupportedLazyDataError(
+            "Unsupported byte order %s for lazy DATA access" % byteord
+        )
+
+    def _channel_bit_widths(self):
+        return [
+            int(self.text['p%db' % i])
+            for i in range(1, self.channel_count + 1)
+        ]
+
+    def numpy_dtype(self):
+        """
+        Recommended NumPy dtype for memory-mapping the DATA segment.
+
+        Supported when ``$DATATYPE`` is ``F`` or ``D`` (IEEE float) with a
+        uniform channel bit width. Variable ``$PnB``, ASCII (``A``), and
+        integer (``I``) layouts raise :class:`UnsupportedLazyDataError` —
+        use a normal (full) load for those files.
+
+        :return: NumPy dtype suitable for ``numpy.memmap``
+        """
+        data_type = self.data_type.upper()
+        if data_type == 'A':
+            raise UnsupportedLazyDataError(
+                "ASCII ($DATATYPE=A) DATA segments do not support lazy/mmap access"
+            )
+        if data_type == 'I':
+            raise UnsupportedLazyDataError(
+                "Integer ($DATATYPE=I) DATA segments do not support lazy/mmap access; "
+                "load the file without only_text=True and use read_events() or as_array()"
+            )
+        if data_type not in ('F', 'D'):
+            raise UnsupportedLazyDataError(
+                "Unsupported $DATATYPE '%s' for lazy/mmap access" % self.data_type
+            )
+
+        bit_widths = self._channel_bit_widths()
+        if len(set(bit_widths)) != 1:
+            raise UnsupportedLazyDataError(
+                "Variable channel bit widths do not support lazy/mmap access"
+            )
+
+        order = self._byte_order_char()
+        expected_bits = 32 if data_type == 'F' else 64
+        if bit_widths[0] != expected_bits:
+            raise UnsupportedLazyDataError(
+                "Unexpected bit width %d for $DATATYPE=%s (expected %d)"
+                % (bit_widths[0], data_type, expected_bits)
+            )
+
+        return np.dtype(order + ('f4' if data_type == 'F' else 'f8'))
+
+    def _effective_data_stop(self, dtype):
+        """
+        Return the inclusive DATA stop offset after applying the same off-by-one
+        correction used when fully parsing the DATA segment.
+        """
+        start = self.data_start
+        stop = self.data_stop
+        data_type_size = dtype.itemsize
+        data_sect_size = stop - start + 1
+        data_mod = data_sect_size % data_type_size
+
+        if data_mod == 0:
+            return stop
+        if data_mod == 1 and self._ignore_offset:
+            return stop - 1
+        if data_mod == 1 and not self._ignore_offset:
+            raise FCSParsingError(
+                "FCS file %s reports a data offset that is off by 1. "
+                "Set `ignore_offset_error=True` to force reading in this file."
+                % self.name
+            )
+        raise FCSParsingError(
+            "Unable to determine the correct byte offsets for event data"
+        )
+
+    def as_memmap(self):
+        """
+        Return a read-only NumPy memmap of event data shaped
+        ``(event_count, channel_count)``.
+
+        Requires a filesystem path (not an in-memory file handle) and an
+        mmap-friendly layout — see :meth:`numpy_dtype`. Values are the raw
+        stored DATA values (no gain / log / timestep pre-processing).
+
+        :return: read-only ``numpy.memmap``
+        """
+        if self._file_path is None:
+            raise UnsupportedLazyDataError(
+                "as_memmap() requires an FCS file path; in-memory file handles "
+                "are not supported"
+            )
+
+        dtype = self.numpy_dtype()
+        effective_stop = self._effective_data_stop(dtype)
+        absolute_start = self._dataset_offset + self.data_start
+        byte_count = effective_stop - self.data_start + 1
+        expected = self.event_count * self.channel_count * dtype.itemsize
+        if byte_count != expected:
+            raise FCSParsingError(
+                "DATA segment size (%d bytes) does not match event_count * "
+                "channel_count * dtype (%d bytes)" % (byte_count, expected)
+            )
+
+        return np.memmap(
+            self._file_path,
+            dtype=dtype,
+            mode='r',
+            offset=absolute_start,
+            shape=(self.event_count, self.channel_count),
+        )
+
+    def read_events(self, indices=None):
+        """
+        Return a 2-D NumPy array of selected events.
+
+        When event data was loaded normally, rows are gathered from the
+        in-memory ``events`` array. When the file was opened with
+        ``only_text=True`` (or events were otherwise not loaded), rows are
+        read via :meth:`as_memmap` for mmap-friendly float layouts.
+
+        :param indices: optional sequence of 0-based event indices. ``None``
+            returns all events.
+        :return: ``numpy.ndarray`` with shape ``(n_selected, channel_count)``
+            and dtype ``float64``
+        """
+        if self.events is not None:
+            events_2d = np.reshape(
+                np.asarray(self.events, dtype=np.float64),
+                (-1, self.channel_count),
+            )
+            if indices is None:
+                return np.array(events_2d, copy=True)
+            idx = np.asarray(indices, dtype=np.intp)
+            return np.array(events_2d[idx], copy=True)
+
+        # Lazy path: metadata-only load via memmap for float layouts
+        mmap_view = self.as_memmap()
+        if indices is None:
+            return np.asarray(mmap_view, dtype=np.float64)
+        idx = np.asarray(indices, dtype=np.intp)
+        return np.asarray(mmap_view[idx], dtype=np.float64)
+
     def as_array(self, preprocess=True):
         """
         Retrieve the event data list as a 2-D NumPy array. Pre-processing is
@@ -686,6 +877,14 @@ class FlowData(object):
 
         :return: NumPy array of 2-D event data
         """
+        if self.events is None:
+            raise AttributeError(
+                "FlowData instance does not contain event data. This might "
+                "occur if the FCS file was read with the only_text=True option. "
+                "Use read_events() or as_memmap() for lazy DATA access, or "
+                "reload without only_text=True."
+            )
+
         # Start processing the event data. Ensure events are double precision
         # because pre-processing will convert all events (even integer data types)
         # to floating point. This precision is needed for accurate downstream
