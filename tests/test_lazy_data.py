@@ -48,20 +48,31 @@ class LazyDataAccessTestCase(unittest.TestCase):
         truth = full.as_array(preprocess=False)
         indices = [0, 1, 10, meta.event_count - 1]
 
-        rows = meta.read_events(indices=indices)
+        rows = meta.read_events(indices=indices, preprocess=False)
         self.assertEqual(rows.shape, (len(indices), meta.channel_count))
         self.assertEqual(rows.dtype, np.float64)
         np.testing.assert_array_equal(rows, truth[indices])
 
+        all_rows = meta.read_events(preprocess=False)
+        np.testing.assert_array_equal(all_rows, truth)
+
+    def test_read_events_preprocess_default_matches_as_array(self):
+        meta = FlowData(self.float_fcs, only_text=True)
+        full = FlowData(self.float_fcs)
+        truth = full.as_array(preprocess=True)
+
         all_rows = meta.read_events()
         np.testing.assert_array_equal(all_rows, truth)
+
+        rows = meta.read_events(indices=[0, 10, 100])
+        np.testing.assert_array_equal(rows, truth[[0, 10, 100]])
 
     def test_read_events_from_loaded_integer_file(self):
         full = FlowData(self.int_fcs)
         truth = full.as_array(preprocess=False)
         indices = [0, 5, 100]
 
-        rows = full.read_events(indices=indices)
+        rows = full.read_events(indices=indices, preprocess=False)
         np.testing.assert_array_equal(rows, truth[indices])
 
     def test_numpy_dtype_and_byte_range(self):

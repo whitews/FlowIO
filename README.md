@@ -43,11 +43,14 @@ from flowio import FlowData
 meta = FlowData("sample.fcs", only_text=True)
 print(meta.pnn_labels, meta.event_count, meta.data_type)
 
-# Read-only memmap shaped (event_count, channel_count)
+# Read-only memmap shaped (event_count, channel_count); raw on-disk values
 mm = meta.as_memmap()
 
-# Selected 0-based event rows as a float64 array
+# Selected 0-based event rows (preprocessed by default, like as_array())
 rows = meta.read_events(indices=[0, 10, 100])
+
+# Raw stored values without gain/log/time scaling
+raw_rows = meta.read_events(indices=[0, 10, 100], preprocess=False)
 ```
 
 ASCII and variable bit-width integer layouts raise `UnsupportedLazyDataError` from

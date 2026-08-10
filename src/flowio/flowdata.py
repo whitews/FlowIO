@@ -788,6 +788,10 @@ class FlowData(object):
         if data_mod == 0:
             return stop
         if data_mod == 1 and self._ignore_offset:
+            warn_msg = "FCS file %s reported incorrect data offset. " % self.name
+            warn_msg += "Attempting to parse data section, but event data should be "
+            warn_msg += "reviewed before trusting this file."
+            warn(warn_msg)
             return stop - 1
         if data_mod == 1 and not self._ignore_offset:
             raise FCSParsingError(
@@ -835,7 +839,7 @@ class FlowData(object):
             shape=(self.event_count, self.channel_count),
         )
 
-    def read_events(self, indices=None):
+    def read_events(self, indices=None, preprocess=True):
         """
         Return a 2-D NumPy array of selected events.
 
@@ -844,27 +848,88 @@ class FlowData(object):
         ``only_text=True`` (or events were otherwise not loaded), rows are
         read via :meth:`as_memmap` for mmap-friendly float layouts.
 
+        Pre-processing matches :meth:`as_array` (gain, log, and time scaling).
+        Use ``preprocess=False`` for raw stored DATA values, or :meth:`as_memmap`
+        for a zero-copy on-disk view when mmap is supported.
+
         :param indices: optional sequence of 0-based event indices. ``None``
             returns all events.
+        :param preprocess: apply gain, log, and time scaling per FCS metadata
+            (default is True, matching :meth:`as_array`).
         :return: ``numpy.ndarray`` with shape ``(n_selected, channel_count)``
             and dtype ``float64``
         """
+        if self.events is not None and indices is None:
+            return self.as_array(preprocess=preprocess)
+
         if self.events is not None:
             events_2d = np.reshape(
                 np.asarray(self.events, dtype=np.float64),
                 (-1, self.channel_count),
             )
-            if indices is None:
-                return np.array(events_2d, copy=True)
             idx = np.asarray(indices, dtype=np.intp)
-            return np.array(events_2d[idx], copy=True)
+            events_2d = np.array(events_2d[idx], copy=True)
+        else:
+            # Lazy path: metadata-only load via memmap for float layouts
+            mmap_view = self.as_memmap()
+            if indices is None:
+                events_2d = np.asarray(mmap_view, dtype=np.float64)
+            else:
+                idx = np.asarray(indices, dtype=np.intp)
+                events_2d = np.asarray(mmap_view[idx], dtype=np.float64)
 
-        # Lazy path: metadata-only load via memmap for float layouts
-        mmap_view = self.as_memmap()
-        if indices is None:
-            return np.asarray(mmap_view, dtype=np.float64)
-        idx = np.asarray(indices, dtype=np.intp)
-        return np.asarray(mmap_view[idx], dtype=np.float64)
+        if preprocess:
+            return self._apply_preprocessing(events_2d)
+        return events_2d
+
+    def _apply_preprocessing(self, tmp_events):
+        """
+        Apply gain, log, and time scaling to a 2-D event array (in-place).
+
+        ``tmp_events`` must be float64 with shape ``(n_events, channel_count)``.
+        """
+        # Event data must be scaled according to channel gain, as well
+        # as corrected for proper lin/log display, and the time channel
+        # scaled by the 'timestep' keyword value (if present).
+        # We'll start with the time channel.
+        if 'timestep' in self.text and self.time_index is not None:
+            try:
+                time_step = float(self.text['timestep'])
+            except ValueError:
+                # Some FCS files contain an empty string or whitespace values
+                # for the 'timestep' keyword. In these cases, set to 1.0
+                if self.text['timestep'].strip() == '':
+                    time_step = 1.0
+                else:
+                    raise ValueError(
+                        f"Timestep value should be a float value but found "
+                        f"the value '{self.text['timestep']}'"
+                    )
+            tmp_events[:, self.time_index] = (
+                tmp_events[:, self.time_index] * time_step
+            )
+
+        # Process channels
+        # For channel data stored on logarithmic scale will get converted
+        # to a linear scale. For channel's stored with amplified data, where
+        # gain (PnG) is != 1.0 (or zero, since it's equivalent to no gain).
+        for chan_num, chan_dict in self.channels.items():
+            # Note that keys are channel numbers, not indices
+            chan_idx = chan_num - 1
+            (chan_decades, chan_log0) = chan_dict['pne']
+            chan_range = chan_dict['pnr']
+            chan_gain = chan_dict['png']
+
+            if chan_decades > 0:
+                tmp_events[:, chan_idx] = (
+                    (10 ** (chan_decades * tmp_events[:, chan_idx] / chan_range))
+                    * chan_log0
+                )
+
+            if chan_gain != 1.0 and chan_gain != 0:
+                tmp_events[:, chan_idx] = tmp_events[:, chan_idx] / chan_gain
+
+        return tmp_events
 
     def as_array(self, preprocess=True):
         """
@@ -895,38 +960,7 @@ class FlowData(object):
         )
 
         if preprocess:
-            # Event data must be scaled according to channel gain, as well
-            # as corrected for proper lin/log display, and the time channel
-            # scaled by the 'timestep' keyword value (if present).
-            # We'll start with the time channel.
-            if 'timestep' in self.text and self.time_index is not None:
-                try:
-                    time_step = float(self.text['timestep'])
-                except ValueError:
-                    # Some FCS files contain an empty string or whitespace values
-                    # for the 'timestep' keyword. In these cases, set to 1.0
-                    if self.text['timestep'].strip() == '':
-                        time_step = 1.0
-                    else:
-                        raise ValueError(f"Timestep value should be a float value but found the value '{self.text['timestep']}'")
-                tmp_events[:, self.time_index] = tmp_events[:, self.time_index] * time_step
-
-            # Process channels
-            # For channel data stored on logarithmic scale will get converted
-            # to a linear scale. For channel's stored with amplified data, where
-            # gain (PnG) is != 1.0 (or zero, since it's equivalent to no gain).
-            for chan_num, chan_dict in self.channels.items():
-                # Note that keys are channel numbers, not indices
-                chan_idx = chan_num - 1
-                (chan_decades, chan_log0) = chan_dict['pne']
-                chan_range = chan_dict['pnr']
-                chan_gain = chan_dict['png']
-
-                if chan_decades > 0:
-                    tmp_events[:, chan_idx] = (10 ** (chan_decades * tmp_events[:, chan_idx] / chan_range)) * chan_log0
-
-                if chan_gain != 1.0 and chan_gain != 0:
-                    tmp_events[:, chan_idx] = tmp_events[:, chan_idx] / chan_gain
+            return self._apply_preprocessing(tmp_events)
 
         return tmp_events
 
