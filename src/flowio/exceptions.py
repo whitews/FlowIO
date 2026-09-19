@@ -38,3 +38,12 @@ class MultipleDataSetsError(FlowIOException):
     the 'nextdata' keyword.
     """
     pass
+
+
+class UnsupportedLazyDataError(FlowIOException):
+    """
+    Raised when lazy or memory-mapped DATA access is not supported for an FCS layout
+    (for example ASCII datatype, variable channel bit widths, or a non-path file handle
+    when event data was not loaded).
+    """
+    pass
