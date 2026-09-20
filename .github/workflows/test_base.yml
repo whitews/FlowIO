@@ -90,6 +90,26 @@ jobs:
               print("raw value:", repr(raw[row, col]))
               print("channel metadata:", channel)
               print("exponent:", repr(exponent))
+          
+          print("==== Diagnose pow ====")
+          exponent = np.float64(1.13671875)
+          
+          values = {
+              "python 10.0 ** float(exponent)": 10.0 ** float(exponent),
+              "math.pow(10.0, float(exponent))": math.pow(10.0, float(exponent)),
+              "numpy scalar power": np.float64(10.0) ** exponent,
+              "numpy array power": (10.0 ** np.array([exponent], dtype=np.float64))[0],
+          }
+          
+          for name, value in values.items():
+              value = np.float64(value)
+              print(f"{name}: {value!r}")
+              print(f"  bits: {value.view(np.uint64):#018x}")
+          
+          print("==== Diagnose fixture value ====")
+          fixture_value = truth[5, 2]
+          print("fixture:", repr(fixture_value))
+          print("fixture bits:", f"{fixture_value.view(np.uint64):#018x}")
           PY
 
       - name: Run tests with coverage
