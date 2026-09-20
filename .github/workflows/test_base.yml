@@ -26,6 +26,72 @@ jobs:
           pip install coverage
           pip install -e .[test]
 
+      - name: Diagnose preprocessing reproducibility
+        run: |
+          python - <<'PY'
+          import hashlib
+          import platform
+          import sys
+          import numpy as np
+      
+          from flowio import FlowData
+      
+          truth_path = "data/truth/data1_preprocessed.npy"
+          fcs_path = "data/fcs_files/data1.fcs"
+      
+          with open(truth_path, "rb") as fh:
+              truth_sha256 = hashlib.sha256(fh.read()).hexdigest()
+      
+          flow_data = FlowData(fcs_path)
+          actual = flow_data.as_array(preprocess=True)
+          truth = np.load(truth_path)
+      
+          print("Python:", sys.version)
+          print("Platform:", platform.platform())
+          print("Machine:", platform.machine())
+          print("Processor:", platform.processor())
+          print("NumPy:", np.__version__)
+          print("NumPy config:")
+          np.show_config()
+      
+          print("actual:", actual.shape, actual.dtype)
+          print("truth:", truth.shape, truth.dtype)
+          print("truth SHA256:", truth_sha256)
+          print("array_equal:", np.array_equal(actual, truth))
+          print("max abs diff:", np.max(np.abs(actual - truth)))
+          print("different values:", np.count_nonzero(actual != truth))
+      
+          if not np.array_equal(actual, truth):
+              mismatch = np.argwhere(actual != truth)[0]
+              row, col = mismatch
+      
+              print("first mismatch:", row, col)
+              print("actual:", repr(actual[row, col]))
+              print("truth:", repr(truth[row, col]))
+              print("difference:", repr(actual[row, col] - truth[row, col]))
+      
+              actual_bits = actual[row, col].view(np.int64)
+              truth_bits = truth[row, col].view(np.int64)
+              print("actual bits:", actual_bits)
+              print("truth bits:", truth_bits)
+              print("ULP distance:", abs(actual_bits - truth_bits))
+      
+              raw = flow_data.as_array(preprocess=False)
+              channel = flow_data.channels[col + 1]
+              decades, log0 = channel["pne"]
+              channel_range = channel["pnr"]
+      
+              exponent = (
+                  decades * raw[row, col] / channel_range
+                  if decades > 0
+                  else None
+              )
+      
+              print("raw value:", repr(raw[row, col]))
+              print("channel metadata:", channel)
+              print("exponent:", repr(exponent))
+          PY
+
       - name: Run tests with coverage
         run: |
           coverage run --source flowio run_tests.py
