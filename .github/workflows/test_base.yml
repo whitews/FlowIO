@@ -26,6 +26,19 @@ jobs:
           pip install coverage
           pip install -e .[test]
 
+      - name: Diagnose with SIMD power disabled
+        env:
+          NPY_DISABLE_CPU_FEATURES: "AVX512_ICL AVX512_SKX AVX512_CLX AVX512_CNL AVX512F AVX512CD AVX2 FMA3 F16C AVX"
+        run: |
+          python - <<'PY'
+          import numpy as np
+      
+          exponent = np.float64(1.13671875)
+          result = (10.0 ** np.array([exponent], dtype=np.float64))[0]
+          print("numpy array power (SIMD disabled):", repr(result))
+          print("bits:", f"{result.view(np.uint64):#018x}")
+          PY
+
       - name: Diagnose preprocessing reproducibility
         run: |
           python - <<'PY'
