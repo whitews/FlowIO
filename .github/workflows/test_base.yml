@@ -32,6 +32,7 @@ jobs:
           import hashlib
           import platform
           import sys
+          import math
           import numpy as np
       
           from flowio import FlowData
