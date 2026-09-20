@@ -1,4 +1,6 @@
 *.pyc
+*.pyd
+*.so
 *.ipynb
 .idea
 .DS_Store
