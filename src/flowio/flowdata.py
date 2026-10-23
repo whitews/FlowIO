@@ -599,25 +599,24 @@ class FlowData(object):
         """return key/value pairs from a delimited string"""
         delimiter = text[0]
 
-        if delimiter == r'|':
-            delimiter = r'\|'
-        elif delimiter == r'\a'[0]:  # test for delimiter being \
-            delimiter = '\\\\'  # regex will require it to be \\
-        elif delimiter == r'*':
-            delimiter = r'\*'
-
         tmp = text[1:-1].replace('$', '')
-        # match the delimited character unless it's doubled
-        regex = re.compile('(?<=[^%s])%s(?!%s)' % (
-            delimiter, delimiter, delimiter))
-        tmp = regex.split(tmp)
-        return dict(
-            zip(
-                [x.lower().replace(
-                    delimiter + delimiter, delimiter) for x in tmp[::2]],
-                [x.replace(delimiter + delimiter, delimiter) for x in tmp[1::2]]
-            )
-        )
+
+        # A doubled delimiter is a literal delimiter inside a keyword or value.
+        # Keywords and values may not start with the delimiter (FCS 3.1, 3.2.7),
+        # so in a run of delimiters every pair is a literal one, and an odd
+        # run ends with the separator. With '/' as the delimiter, 'a//b///c'
+        # is the value 'a/b/' followed by the next keyword 'c'.
+        items = ['']
+        runs = re.split('((?:%s)+)' % re.escape(delimiter), tmp)
+        for i, piece in enumerate(runs):
+            if i % 2 == 0:
+                items[-1] += piece
+            else:
+                items[-1] += delimiter * (len(piece) // 2)
+                if len(piece) % 2 == 1:
+                    items.append('')
+
+        return dict(zip([x.lower() for x in items[::2]], items[1::2]))
 
     @staticmethod
     def __format_integer(b):
