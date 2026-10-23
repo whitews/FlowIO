@@ -233,3 +233,59 @@ class FlowDataTestCase(unittest.TestCase):
     def test_data_stop_offset_discrepancy(self):
         fcs_file = "data/fcs_files/data_stop_offset_discrepancy_example.fcs"
         self.assertRaises(DataOffsetDiscrepancyError, FlowData, fcs_file)
+
+
+def _make_fcs_bytes(delimiter, extra_keywords):
+    """Build a minimal FCS 3.1 file (2 channels, 3 float events) with the given delimiter."""
+    data = np.arange(6, dtype='<f4').tobytes()
+    keywords = [
+        ('$BYTEORD', '1,2,3,4'), ('$DATATYPE', 'F'), ('$MODE', 'L'), ('$NEXTDATA', '0'),
+        ('$PAR', '2'), ('$TOT', '3'),
+        ('$P1B', '32'), ('$P1E', '0,0'), ('$P1N', 'FSC-A'), ('$P1R', '1024'),
+        ('$P2B', '32'), ('$P2E', '0,0'), ('$P2N', 'SSC-A'), ('$P2R', '1024'),
+    ] + extra_keywords
+
+    def escape(s):
+        return s.replace(delimiter, delimiter * 2)
+
+    text_start = 58
+    data_start = 0
+    for _ in range(3):  # offsets change the TEXT length, so iterate to a fixed point
+        pairs = keywords + [('$BEGINDATA', str(data_start)), ('$ENDDATA', str(data_start + len(data) - 1))]
+        text = delimiter + ''.join(escape(k) + delimiter + escape(v) + delimiter for k, v in pairs)
+        text = text.encode('ascii')
+        data_start = text_start + len(text)
+    offsets = (text_start, data_start - 1, data_start, data_start + len(data) - 1, 0, 0)
+    header = b'FCS3.1    ' + b''.join(b'%8d' % offset for offset in offsets)
+    return header + text + data
+
+
+class TextParsingTestCase(unittest.TestCase):
+    """TEXT segment parsing with escaped (doubled) delimiters, FCS 3.1 section 3.2.7."""
+
+    @staticmethod
+    def parse_pairs(text):
+        return FlowData._FlowData__parse_pairs(text)
+
+    def test_escaped_delimiter_in_value(self):
+        for delimiter in ['/', '|', '*', '\\', '\x0c', '.', '+', '?', '(', '^']:
+            d = delimiter
+            text = d + 'COM' + d + 'a' + d + d + 'b' + d + 'CYT' + d + 'x' + d
+            self.assertEqual(self.parse_pairs(text), {'com': 'a' + d + 'b', 'cyt': 'x'}, repr(d))
+
+    def test_value_ending_with_escaped_delimiter(self):
+        # 'C:\\data\\' escaped is 'C:\\\\data\\\\', followed by the separator
+        text = '\\$SRC\\C:\\\\data\\\\\\$CYT\\x\\'
+        self.assertEqual(self.parse_pairs(text), {'src': 'C:\\data\\', 'cyt': 'x'})
+
+    def test_last_value_ending_with_escaped_delimiter(self):
+        text = '/$CYT/x/$SRC/a///'
+        self.assertEqual(self.parse_pairs(text), {'cyt': 'x', 'src': 'a/'})
+
+    def test_read_file_with_value_ending_in_delimiter(self):
+        fcs_bytes = _make_fcs_bytes('\\', [('$SRC', 'C:\\data\\'), ('$CYT', 'test')])
+        flow_data = FlowData(io.BytesIO(fcs_bytes))
+
+        self.assertEqual(flow_data.text['src'], 'C:\\data\\')
+        self.assertEqual(flow_data.text['cyt'], 'test')
+        np.testing.assert_array_equal(flow_data.as_array(preprocess=False).ravel(), np.arange(6))
