@@ -606,14 +606,15 @@ class FlowData(object):
         elif delimiter == r'*':
             delimiter = r'\*'
 
-        tmp = text[1:-1].replace('$', '')
+        tmp = text[1:-1]
         # match the delimited character unless it's doubled
         regex = re.compile('(?<=[^%s])%s(?!%s)' % (
             delimiter, delimiter, delimiter))
         tmp = regex.split(tmp)
+        # '$' is dropped from keywords only; values are free text and keep it
         return dict(
             zip(
-                [x.lower().replace(
+                [x.lower().replace('$', '').replace(
                     delimiter + delimiter, delimiter) for x in tmp[::2]],
                 [x.replace(delimiter + delimiter, delimiter) for x in tmp[1::2]]
             )

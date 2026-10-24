@@ -233,3 +233,43 @@ class FlowDataTestCase(unittest.TestCase):
     def test_data_stop_offset_discrepancy(self):
         fcs_file = "data/fcs_files/data_stop_offset_discrepancy_example.fcs"
         self.assertRaises(DataOffsetDiscrepancyError, FlowData, fcs_file)
+
+
+def _make_fcs_bytes(extra_keywords):
+    """Build a minimal FCS 3.1 file (2 channels, 3 float events) with '/' as the delimiter."""
+    data = np.arange(6, dtype='<f4').tobytes()
+    keywords = [
+        ('$BYTEORD', '1,2,3,4'), ('$DATATYPE', 'F'), ('$MODE', 'L'), ('$NEXTDATA', '0'),
+        ('$PAR', '2'), ('$TOT', '3'),
+        ('$P1B', '32'), ('$P1E', '0,0'), ('$P1N', 'FSC-A'), ('$P1R', '1024'),
+        ('$P2B', '32'), ('$P2E', '0,0'), ('$P2N', 'SSC-A'), ('$P2R', '1024'),
+    ] + extra_keywords
+
+    text_start = 58
+    data_start = 0
+    for _ in range(3):  # offsets change the TEXT length, so iterate to a fixed point
+        pairs = keywords + [('$BEGINDATA', str(data_start)), ('$ENDDATA', str(data_start + len(data) - 1))]
+        text = ('/' + ''.join(k + '/' + v + '/' for k, v in pairs)).encode('ascii')
+        data_start = text_start + len(text)
+    offsets = (text_start, data_start - 1, data_start, data_start + len(data) - 1, 0, 0)
+    header = b'FCS3.1    ' + b''.join(b'%8d' % offset for offset in offsets)
+    return header + text + data
+
+
+class DollarSignTestCase(unittest.TestCase):
+    """'$' is part of keyword names, but values are free text (FCS 3.1 section 3.2.8)."""
+
+    def test_dollar_sign_in_value(self):
+        text = '/$FIL/run$7.fcs/$COM/cost $50/BD$NPAR/7/'
+        self.assertEqual(
+            FlowData._FlowData__parse_pairs(text),
+            {'fil': 'run$7.fcs', 'com': 'cost $50', 'bdnpar': '7'}
+        )
+
+    def test_read_file_with_dollar_sign_in_value(self):
+        fcs_bytes = _make_fcs_bytes([('$FIL', 'run$7.fcs')])
+        flow_data = FlowData(io.BytesIO(fcs_bytes))
+
+        self.assertEqual(flow_data.text['fil'], 'run$7.fcs')
+        self.assertEqual(flow_data.pnn_labels, ['FSC-A', 'SSC-A'])
+        np.testing.assert_array_equal(flow_data.as_array(preprocess=False).ravel(), np.arange(6))
