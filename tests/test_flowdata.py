@@ -257,19 +257,20 @@ def _make_fcs_bytes(extra_keywords):
 
 
 class DollarSignTestCase(unittest.TestCase):
-    """'$' is part of keyword names, but values are free text (FCS 3.1 section 3.2.8)."""
+    """Only the leading '$' of a keyword is dropped; values are free text (FCS 3.1 section 3.2.8)."""
 
     def test_dollar_sign_in_value(self):
         text = '/$FIL/run$7.fcs/$COM/cost $50/BD$NPAR/7/'
         self.assertEqual(
             FlowData._FlowData__parse_pairs(text),
-            {'fil': 'run$7.fcs', 'com': 'cost $50', 'bdnpar': '7'}
+            {'fil': 'run$7.fcs', 'com': 'cost $50', 'bd$npar': '7'}
         )
 
     def test_read_file_with_dollar_sign_in_value(self):
-        fcs_bytes = _make_fcs_bytes([('$FIL', 'run$7.fcs')])
+        fcs_bytes = _make_fcs_bytes([('$FIL', 'run$7.fcs'), ('BD$NPAR', '7')])
         flow_data = FlowData(io.BytesIO(fcs_bytes))
 
         self.assertEqual(flow_data.text['fil'], 'run$7.fcs')
+        self.assertEqual(flow_data.text['bd$npar'], '7')
         self.assertEqual(flow_data.pnn_labels, ['FSC-A', 'SSC-A'])
         np.testing.assert_array_equal(flow_data.as_array(preprocess=False).ravel(), np.arange(6))

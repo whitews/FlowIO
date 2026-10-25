@@ -611,10 +611,11 @@ class FlowData(object):
         regex = re.compile('(?<=[^%s])%s(?!%s)' % (
             delimiter, delimiter, delimiter))
         tmp = regex.split(tmp)
-        # '$' is dropped from keywords only; values are free text and keep it
+        # Keywords are lowercased and lose their leading '$' (as in create_fcs).
+        # Any other '$', in keywords or in free-text values, is kept.
         return dict(
             zip(
-                [x.lower().replace('$', '').replace(
+                [x.lower().lstrip('$').replace(
                     delimiter + delimiter, delimiter) for x in tmp[::2]],
                 [x.replace(delimiter + delimiter, delimiter) for x in tmp[1::2]]
             )
