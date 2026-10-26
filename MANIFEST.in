@@ -1,2 +1,3 @@
 include LICENSE
+include src/flowio/_preprocessing_ext.c
 prune tests/
